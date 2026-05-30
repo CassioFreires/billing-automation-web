@@ -1,0 +1,29 @@
+@import "tailwindcss"; /* Se estiver usando Tailwind v4, ou use a estrutura padrão da v3 */
+
+@layer base {
+  :root {
+    /* Cores de Fundo (Backgrounds) */
+    --bg-main: #0b0f19;    /* Azul escuro profundo para o fundo principal */
+    --bg-card: #131a2c;    /* Card ligeiramente mais claro */
+    
+    /* Cores de Marca (Brand) */
+    --brand-primary: #0ea5e9; /* Sky-500 (Azul elétrico da sua interface) */
+    --brand-success: #10b981; /* Verde para 'Em Dia' e Sucesso */
+    --brand-warning: #f59e0b; /* Âmbar/Laranja para 'Inadimplente' */
+
+    /* Cores de Texto */
+    --text-main: #ffffff;
+    --text-muted: #64748b;    /* Slate-500 para textos secundários e legendas */
+  }
+
+  /* Exemplo: Se futuramente quiser criar um tema alternativo, basta mudar as variáveis aqui */
+  /* [data-theme="nature"] {
+    --bg-main: #06140d;
+    --brand-primary: #10b981;
+  } */
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+}
