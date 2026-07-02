@@ -1,32 +1,29 @@
-import React, { useState } from 'react';
-import { Sidebar } from './components/Layouts/SideBar';
-import { DashboardPage } from './pages/Dashboard/Dashboard';
-import { ClientsPage } from './components/ClientsPage/ClientsPage';
+import { Routes, Route, Navigate } from "react-router-dom";
+import { ProtectedRoute } from "./auth/ProtectedRoute";
+import { AppShell } from "./components/Layouts/AppShell";
+import { LoginPage } from "./pages/Login/LoginPage";
+import { DashboardPage } from "./pages/Dashboard/Dashboard";
+import { ClientsPage } from "./components/ClientsPage/ClientsPage";
+import { SettingsPage } from "./pages/Settings/SettingsPage";
 
-const App: React.FC = () => {
-  const [activePage, setActivePage] = useState<string>('dashboard');
-
+export default function App() {
   return (
-    <div className="min-h-screen bg-bg-main text-white flex flex-col lg:flex-row">
-      {/* Menu de Navegação Global */}
-      <Sidebar activePage={activePage} setActivePage={setActivePage} />
-      
-      {/* Conteúdo Principal Dinâmico */}
-      <main className="flex-1 lg:pl-64 pt-24 lg:pt-0 p-6 sm:p-10 max-w-7xl mx-auto w-full">
-        {activePage === 'dashboard' && <DashboardPage />}
-        {activePage === 'clients' && <ClientsPage />}
-        {activePage === 'settings' && (
-          <div className="p-6 bg-bg-card rounded-2xl border border-slate-800 animate-fade-in">
-            <h2 className="text-2xl font-bold">Configuração da API (Evolution / n8n)</h2>
-            <p className="text-text-muted text-sm mt-1">Conecte sua instância dedicada do WhatsApp.</p>
-            <div className="mt-6 p-4 bg-slate-900 border border-slate-800 text-sm text-brand-primary rounded-xl font-mono">
-              Status do Servidor: CONECTADO À INSTÂNCIA VPS_NODE_01
-            </div>
-          </div>
-        )}
-      </main>
-    </div>
-  );
-};
+    <Routes>
+      {/* Pública */}
+      <Route path="/login" element={<LoginPage />} />
 
-export default App;
+      {/* Protegidas (exigem JWT) dentro do layout autenticado */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppShell />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/clients" element={<ClientsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Route>
+      </Route>
+
+      {/* Raiz e fallback */}
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
+  );
+}

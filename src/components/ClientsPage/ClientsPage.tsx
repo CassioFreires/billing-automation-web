@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Search, Send, Calendar, CheckCircle2, AlertCircle, Bot, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useInvoiceOverdue } from '../../hooks/useInvoiceOverdue';
+import notificationService from '../../services/notification.service';
 
 export const ClientsPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -17,16 +18,12 @@ export const ClientsPage: React.FC = () => {
   const invoicesOverdue = data?.invoices || [];
   const meta = data?.meta || { totalPages: 1, totalItems: 0 };
 
-  const handleManualTrigger = async (phone: string, name: string) => {
+  const handleManualTrigger = async (invoiceId: string, name: string) => {
     try {
-      await fetch('http://localhost:3333/api/notifications/trigger', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, clientName: name })
-      });
-      alert(`Fluxo manual enviado para o WhatsApp de ${name}!`);
+      await notificationService.triggerByInvoice(invoiceId);
+      alert(`Cobrança de ${name} enviada para a fila de processamento!`);
     } catch {
-      alert('Erro ao conectar com o servidor da automação.');
+      alert('Erro ao enfileirar a cobrança. Verifique sua conexão/sessão.');
     }
   };
 
@@ -134,7 +131,7 @@ export const ClientsPage: React.FC = () => {
                     </td>
                     <td className="p-4 text-center">
                       <button
-                        onClick={() => handleManualTrigger(clientPhone, clientName)}
+                        onClick={() => handleManualTrigger(item.id, clientName)}
                         className="p-2 bg-slate-800/80 hover:bg-sky-600 text-slate-400 hover:text-white rounded-xl border border-slate-700/50 transition-all cursor-pointer inline-flex items-center justify-center hover:shadow-lg hover:shadow-sky-500/20 active:scale-95"
                       >
                         <Send className="h-3.5 w-3.5" />

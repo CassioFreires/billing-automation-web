@@ -1,11 +1,37 @@
-import axios from 'axios';
+import axios from "axios";
+import { tokenStorage } from "../lib/token";
 
+/**
+ * Cliente HTTP único da aplicação.
+ * - baseURL relativa (`/api`): em DEV o proxy do Vite encaminha para a API;
+ *   em produção o nginx serve `/api` no mesmo host. Sem CORS, sem host fixo.
+ * - Interceptor de request: injeta o JWT (Bearer) automaticamente.
+ * - Interceptor de response: em 401, limpa o token e avisa a app (logout).
+ */
 const api = axios.create({
-  baseURL: 'http://localhost:3000/api/',
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json'
-  }
+  baseURL: import.meta.env.VITE_API_URL ?? "/api",
+  timeout: 15000,
+  headers: { "Content-Type": "application/json" },
 });
+
+api.interceptors.request.use((config) => {
+  const token = tokenStorage.get();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 401) {
+      tokenStorage.clear();
+      // AuthContext escuta este evento para redirecionar ao login sem reload.
+      window.dispatchEvent(new Event("auth:unauthorized"));
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default api;
