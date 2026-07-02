@@ -53,6 +53,13 @@ src/
 - `placeholderData: previousData` para paginação sem "piscar".
 - Defaults globais em `main.tsx` (`retry: 1`, sem refetch no foco, `staleTime` 1 min).
 
+## Performance & resiliência
+
+- **Code splitting**: as páginas são `lazy()` + `<Suspense>` (ver `App.tsx`) — cada rota é um chunk. A landing pública não baixa o JS do painel, e vice-versa. Fallback de carregamento em `components/RouteFallback`.
+- **ErrorBoundary** global (`components/ErrorBoundary`, montado no `main.tsx`) evita tela branca em erro de render e oferece "Recarregar". Ponto natural para plugar observabilidade (Sentry).
+- **React Query**: cache + `invalidateQueries` nas mutations (a UI atualiza sozinha); `placeholderData` para paginação sem flicker.
+- **Skeletons** de loading nas listas/cards (sem "pulos" de layout).
+
 ## Convenções
 
 - `verbatimModuleSyntax` ligado → **importar tipos com `import type`**.
