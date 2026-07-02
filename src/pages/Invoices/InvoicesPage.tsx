@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Plus, Send, QrCode, ChevronLeft, ChevronRight, Loader2, AlertCircle, Copy, Check } from "lucide-react";
+import { Plus, Send, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle, Copy, Check, CheckCircle2 } from "lucide-react";
 import { isAxiosError } from "axios";
 import { Modal } from "../../components/ui/Modal";
 import { useInvoices, useCreateInvoice, useTriggerNotification } from "../../hooks/useInvoices";
@@ -23,6 +23,9 @@ const statusBadge: Record<string, string> = {
 const statusLabel: Record<string, string> = { PAID: "Pago", PENDING: "Pendente", OVERDUE: "Vencido", FAILED: "Falhou" };
 
 const EMPTY_FORM: InvoiceInput = { clientId: "", value: 0, dueDate: "" };
+
+// Uma fatura PAGA não é cobrável nem exibe dados de pagamento (PIX/checkout).
+const isPaid = (status: string) => status === "PAID";
 
 function apiError(err: unknown, fallback: string): string {
   if (isAxiosError(err) && err.response?.data?.error) return String(err.response.data.error);
@@ -171,18 +174,24 @@ export const InvoicesPage: React.FC = () => {
                           <button
                             onClick={() => setDetail(inv)}
                             className="focus-ring p-2 rounded-lg text-text-muted hover:text-white hover:bg-bg-elevated transition-all"
-                            aria-label="Ver PIX/checkout"
+                            aria-label="Ver detalhes"
                           >
-                            <QrCode className="h-4 w-4" />
+                            <Eye className="h-4 w-4" />
                           </button>
-                          <button
-                            onClick={() => trigger(inv.id)}
-                            disabled={triggeringId === inv.id}
-                            className="focus-ring p-2 rounded-lg text-text-muted hover:text-white hover:bg-brand-primary transition-all disabled:opacity-50"
-                            aria-label="Disparar cobrança"
-                          >
-                            {triggeringId === inv.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                          </button>
+                          {isPaid(inv.status) ? (
+                            <span className="p-2 text-brand-success" title="Fatura paga" aria-label="Fatura paga">
+                              <CheckCircle2 className="h-4 w-4" />
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => trigger(inv.id)}
+                              disabled={triggeringId === inv.id}
+                              className="focus-ring p-2 rounded-lg text-text-muted hover:text-white hover:bg-brand-primary transition-all disabled:opacity-50"
+                              aria-label="Disparar cobrança"
+                            >
+                              {triggeringId === inv.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -249,26 +258,46 @@ export const InvoicesPage: React.FC = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-text-muted text-sm">{detail.client?.name}</span>
-              <span className="font-mono font-semibold">{formatBRL(detail.value)}</span>
-            </div>
-            {detail.checkoutUrl && (
-              <div>
-                <p className="text-xs text-text-muted uppercase tracking-wider mb-1">Link de checkout</p>
-                <a href={detail.checkoutUrl} target="_blank" rel="noreferrer" className="text-brand-primary hover:text-brand-hover text-sm break-all">{detail.checkoutUrl}</a>
+              <div className="flex items-center gap-3">
+                <span className="font-mono font-semibold">{formatBRL(detail.value)}</span>
+                <span className={`text-xs px-2.5 py-0.5 rounded-full border ${statusBadge[detail.status] ?? statusBadge.FAILED}`}>
+                  {statusLabel[detail.status] ?? detail.status}
+                </span>
               </div>
-            )}
-            {detail.pixCopyPaste ? (
-              <div>
-                <p className="text-xs text-text-muted uppercase tracking-wider mb-1">PIX Copia e Cola</p>
-                <div className="flex items-start gap-2 bg-bg-main/60 border border-border-subtle rounded-xl p-3">
-                  <code className="text-xs break-all text-text-muted flex-1">{detail.pixCopyPaste}</code>
-                  <button onClick={() => copyPix(detail.pixCopyPaste!)} className="focus-ring shrink-0 text-text-muted hover:text-white" aria-label="Copiar PIX">
-                    {copied ? <Check className="h-4 w-4 text-brand-success" /> : <Copy className="h-4 w-4" />}
-                  </button>
+            </div>
+
+            {isPaid(detail.status) ? (
+              /* Fatura paga: sem PIX/checkout — mostra a confirmação. */
+              <div className="flex items-center gap-2.5 bg-emerald-500/10 border border-emerald-500/20 text-brand-success rounded-xl px-4 py-3">
+                <CheckCircle2 className="h-5 w-5 shrink-0" />
+                <div className="text-sm">
+                  <p className="font-medium">Pagamento confirmado</p>
+                  {detail.paidAt && <p className="text-emerald-300/80 text-xs">Pago em {formatDate(detail.paidAt)}</p>}
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-text-faint">Sem dados de PIX para esta cobrança.</p>
+              /* Fatura em aberto: opções de pagamento. */
+              <>
+                {detail.checkoutUrl && (
+                  <div>
+                    <p className="text-xs text-text-muted uppercase tracking-wider mb-1">Link de checkout</p>
+                    <a href={detail.checkoutUrl} target="_blank" rel="noreferrer" className="text-brand-primary hover:text-brand-hover text-sm break-all">{detail.checkoutUrl}</a>
+                  </div>
+                )}
+                {detail.pixCopyPaste ? (
+                  <div>
+                    <p className="text-xs text-text-muted uppercase tracking-wider mb-1">PIX Copia e Cola</p>
+                    <div className="flex items-start gap-2 bg-bg-main/60 border border-border-subtle rounded-xl p-3">
+                      <code className="text-xs break-all text-text-muted flex-1">{detail.pixCopyPaste}</code>
+                      <button onClick={() => copyPix(detail.pixCopyPaste!)} className="focus-ring shrink-0 text-text-muted hover:text-white" aria-label="Copiar PIX">
+                        {copied ? <Check className="h-4 w-4 text-brand-success" /> : <Copy className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-text-faint">Sem dados de PIX para esta cobrança.</p>
+                )}
+              </>
             )}
           </div>
         )}
