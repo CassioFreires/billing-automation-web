@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { AppShell } from "./components/Layouts/AppShell";
+import { LandingPage } from "./pages/Landing/LandingPage";
 import { LoginPage } from "./pages/Login/LoginPage";
 import { RegisterPage } from "./pages/Register/RegisterPage";
 import { DashboardPage } from "./pages/Dashboard/Dashboard";
@@ -11,6 +12,7 @@ export default function App() {
   return (
     <Routes>
       {/* Públicas */}
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
@@ -23,9 +25,8 @@ export default function App() {
         </Route>
       </Route>
 
-      {/* Raiz e fallback */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
