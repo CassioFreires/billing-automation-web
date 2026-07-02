@@ -6,6 +6,7 @@ import { LoginPage } from "./pages/Login/LoginPage";
 import { RegisterPage } from "./pages/Register/RegisterPage";
 import { DashboardPage } from "./pages/Dashboard/Dashboard";
 import { ClientsPage } from "./pages/Clients/ClientsPage";
+import { InvoicesPage } from "./pages/Invoices/InvoicesPage";
 import { SettingsPage } from "./pages/Settings/SettingsPage";
 
 export default function App() {
@@ -21,6 +22,7 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/clients" element={<ClientsPage />} />
+          <Route path="/invoices" element={<InvoicesPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Route>
