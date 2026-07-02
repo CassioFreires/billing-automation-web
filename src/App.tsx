@@ -5,7 +5,7 @@ import { LandingPage } from "./pages/Landing/LandingPage";
 import { LoginPage } from "./pages/Login/LoginPage";
 import { RegisterPage } from "./pages/Register/RegisterPage";
 import { DashboardPage } from "./pages/Dashboard/Dashboard";
-import { ClientsPage } from "./components/ClientsPage/ClientsPage";
+import { ClientsPage } from "./pages/Clients/ClientsPage";
 import { SettingsPage } from "./pages/Settings/SettingsPage";
 
 export default function App() {

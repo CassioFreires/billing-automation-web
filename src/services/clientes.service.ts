@@ -1,30 +1,44 @@
-import api from './api';
+import api from "./api";
+
+export interface Client {
+  id: string;
+  name: string;
+  phone: string;
+  document: string;
+  status: string; // EM_DIA | EM_ATRASO
+  debtValue?: number;
+  createdAt?: string;
+}
+
+export interface ClientInput {
+  name: string;
+  phone: string;
+  document: string;
+}
 
 class ClientService {
-  async findAll() {
-    const response = await api.get('/clients');
-    console.log(response)
+  async findAll(): Promise<Client[]> {
+    const response = await api.get("/clients");
     return response.data;
   }
 
-  async findById(id:number) {
+  async findById(id: string): Promise<Client> {
     const response = await api.get(`/clients/${id}`);
     return response.data;
   }
 
-  async create(clientData:any) {
-    const response = await api.post('/clients', clientData);
+  async create(data: ClientInput): Promise<Client> {
+    const response = await api.post("/clients", data);
     return response.data;
   }
 
-  async update(id:number, clientData:any) {
-    const response = await api.put(`/clients/${id}`, clientData);
+  async update(id: string, data: Partial<ClientInput>): Promise<Client> {
+    const response = await api.put(`/clients/${id}`, data);
     return response.data;
   }
 
-  async delete(id:number) {
-    const response = await api.delete(`/clients/${id}`);
-    return response.data;
+  async remove(id: string): Promise<void> {
+    await api.delete(`/clients/${id}`);
   }
 }
 
