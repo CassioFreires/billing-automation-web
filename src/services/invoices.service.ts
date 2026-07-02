@@ -4,9 +4,9 @@ import api from './api';
 const EMPTY_PAGE = { invoices: [], meta: { totalItems: 0, totalPages: 1, currentPage: 1, limit: 10 } };
 
 export class InvoiceService {
-    async findAll() {
-        const response = await api.get('/invoices');
-        return response.data;
+    async findAll(params: { page?: number; limit?: number; status?: string } = {}) {
+        const response = await api.get('/invoices', { params });
+        return response.data.result; // { invoices, meta }
     }
 
     async findPendingInvoices(page: number, limit: number) {
@@ -25,7 +25,7 @@ export class InvoiceService {
         }
     }
 
-    async findById(id: number) {
+    async findById(id: string) {
         const response = await api.get(`/invoices/${id}`);
         return response.data;
     }
@@ -35,12 +35,12 @@ export class InvoiceService {
         return response.data;
     }
 
-    async update(id: number, clientData: any) {
+    async update(id: string, clientData: any) {
         const response = await api.put(`/invoices/${id}`, clientData);
         return response.data;
     }
 
-    async delete(id: number) {
+    async delete(id: string) {
         const response = await api.delete(`/invoices/${id}`);
         return response.data;
     }
