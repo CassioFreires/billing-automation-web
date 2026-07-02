@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { AppShell } from "./components/Layouts/AppShell";
 import { LoginPage } from "./pages/Login/LoginPage";
+import { RegisterPage } from "./pages/Register/RegisterPage";
 import { DashboardPage } from "./pages/Dashboard/Dashboard";
 import { ClientsPage } from "./components/ClientsPage/ClientsPage";
 import { SettingsPage } from "./pages/Settings/SettingsPage";
@@ -9,8 +10,9 @@ import { SettingsPage } from "./pages/Settings/SettingsPage";
 export default function App() {
   return (
     <Routes>
-      {/* Pública */}
+      {/* Públicas */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
 
       {/* Protegidas (exigem JWT) dentro do layout autenticado */}
       <Route element={<ProtectedRoute />}>

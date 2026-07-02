@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Bot, Lock, User, Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
 import { isAxiosError } from "axios";
@@ -106,6 +106,13 @@ export const LoginPage: React.FC = () => {
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {loading ? "Entrando..." : "Entrar"}
           </button>
+
+          <p className="text-center text-sm text-text-muted">
+            Não tem conta?{" "}
+            <Link to="/register" className="text-brand-primary hover:text-brand-hover font-medium">
+              Criar conta
+            </Link>
+          </p>
         </form>
 
         <p className="text-center text-xs text-text-faint mt-6">

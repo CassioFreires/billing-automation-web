@@ -2,11 +2,12 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 import type { ReactNode } from "react";
 import { tokenStorage } from "../lib/token";
 import { authService } from "../services/auth.service";
-import type { LoginPayload } from "../services/auth.service";
+import type { LoginPayload, RegisterPayload } from "../services/auth.service";
 
 interface AuthContextValue {
   isAuthenticated: boolean;
   login: (payload: LoginPayload) => Promise<void>;
+  register: (payload: RegisterPayload) => Promise<void>;
   logout: () => void;
 }
 
@@ -19,6 +20,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (payload: LoginPayload) => {
     await authService.login(payload);
+    setIsAuthenticated(true);
+  }, []);
+
+  const register = useCallback(async (payload: RegisterPayload) => {
+    await authService.register(payload);
     setIsAuthenticated(true);
   }, []);
 
@@ -38,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
