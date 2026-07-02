@@ -1,29 +1,88 @@
-@import "tailwindcss"; /* Se estiver usando Tailwind v4, ou use a estrutura padrão da v3 */
+@import "tailwindcss";
 
-@layer base {
-  :root {
-    /* Cores de Fundo (Backgrounds) */
-    --bg-main: #0b0f19;    /* Azul escuro profundo para o fundo principal */
-    --bg-card: #131a2c;    /* Card ligeiramente mais claro */
-    
-    /* Cores de Marca (Brand) */
-    --brand-primary: #0ea5e9; /* Sky-500 (Azul elétrico da sua interface) */
-    --brand-success: #10b981; /* Verde para 'Em Dia' e Sucesso */
-    --brand-warning: #f59e0b; /* Âmbar/Laranja para 'Inadimplente' */
+/* =============================================================================
+ * DESIGN SYSTEM — AUTOCORE (dark premium)
+ * Tailwind v4: tokens declarados em @theme viram utilitários automaticamente.
+ *   --color-brand-primary  →  bg-brand-primary / text-brand-primary / border-brand-primary
+ *   --animate-fade-in      →  animate-fade-in
+ * Documentação: SDD/context/design-system.md
+ * ========================================================================== */
+@theme {
+  /* Superfícies (fundo → cards → elevado) */
+  --color-bg-main: #070b14;
+  --color-bg-card: #0f1626;
+  --color-bg-elevated: #16203a;
 
-    /* Cores de Texto */
-    --text-main: #ffffff;
-    --text-muted: #64748b;    /* Slate-500 para textos secundários e legendas */
-  }
+  /* Bordas */
+  --color-border-subtle: #1e293b; /* slate-800 */
 
-  /* Exemplo: Se futuramente quiser criar um tema alternativo, basta mudar as variáveis aqui */
-  /* [data-theme="nature"] {
-    --bg-main: #06140d;
-    --brand-primary: #10b981;
-  } */
+  /* Marca */
+  --color-brand-primary: #0ea5e9; /* sky-500 */
+  --color-brand-hover: #38bdf8;   /* sky-400 */
+
+  /* Semânticas */
+  --color-brand-success: #10b981;
+  --color-brand-warning: #f59e0b;
+  --color-brand-danger: #f43f5e;
+
+  /* Texto */
+  --color-text-main: #f1f5f9;  /* slate-100 */
+  --color-text-muted: #94a3b8; /* slate-400 */
+  --color-text-faint: #64748b; /* slate-500 */
+
+  /* Tipografia */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Raios e sombras */
+  --radius-card: 1rem;
+  --shadow-glow: 0 8px 30px -12px rgb(14 165 233 / 0.35);
+
+  /* Animações (viram utilitários animate-*) */
+  --animate-fade-in: fade-in 0.4s ease-out both;
+  --animate-fade-in-up: fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-body {
-  background-color: var(--bg-main);
-  color: var(--text-main);
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: var(--color-bg-main);
+    color: var(--color-text-main);
+    font-family: var(--font-sans);
+    /* Textura sutil de fundo (radial glow) — premium sem pesar */
+    background-image:
+      radial-gradient(60rem 60rem at 100% -10%, rgb(14 165 233 / 0.06), transparent),
+      radial-gradient(50rem 50rem at -10% 110%, rgb(139 92 246 / 0.05), transparent);
+    background-attachment: fixed;
+  }
+
+  /* Scrollbar discreta e coerente com o tema */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-subtle) transparent;
+  }
+}
+
+@layer components {
+  /* Foco acessível padrão (teclado) coerente com a marca */
+  .focus-ring {
+    outline: none;
+  }
+  .focus-ring:focus-visible {
+    outline: 2px solid var(--color-brand-primary);
+    outline-offset: 2px;
+  }
 }
