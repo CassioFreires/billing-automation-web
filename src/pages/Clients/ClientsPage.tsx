@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from "react";
-import { Plus, Search, Pencil, Trash2, Users, Loader2, AlertCircle } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Users, Loader2, AlertCircle, UploadCloud } from "lucide-react";
 import { isAxiosError } from "axios";
 import { Modal } from "../../components/ui/Modal";
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from "../../hooks/useClients";
 import type { Client, ClientInput } from "../../services/clientes.service";
+import { ImportWizard } from "./ImportWizard";
 
 const EMPTY_FORM: ClientInput = { name: "", phone: "", document: "" };
 
@@ -25,6 +26,7 @@ export const ClientsPage: React.FC = () => {
   const [form, setForm] = useState<ClientInput>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Client | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -92,12 +94,20 @@ export const ClientsPage: React.FC = () => {
           <h1 className="text-3xl font-extrabold tracking-tight">Clientes</h1>
           <p className="text-text-muted text-sm mt-1">Gerencie os clientes da sua conta.</p>
         </div>
-        <button
-          onClick={openCreate}
-          className="focus-ring bg-brand-primary hover:bg-brand-hover text-white font-semibold px-4 py-2.5 rounded-xl text-sm flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-sky-500/10"
-        >
-          <Plus className="h-4 w-4" /> Novo cliente
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setImportOpen(true)}
+            className="focus-ring border border-border-subtle hover:bg-bg-elevated text-text-muted hover:text-white font-semibold px-4 py-2.5 rounded-xl text-sm flex items-center gap-2 transition-all active:scale-95"
+          >
+            <UploadCloud className="h-4 w-4" /> Importar CSV
+          </button>
+          <button
+            onClick={openCreate}
+            className="focus-ring bg-brand-primary hover:bg-brand-hover text-white font-semibold px-4 py-2.5 rounded-xl text-sm flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-sky-500/10"
+          >
+            <Plus className="h-4 w-4" /> Novo cliente
+          </button>
+        </div>
       </div>
 
       {/* Busca */}
@@ -224,6 +234,9 @@ export const ClientsPage: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Assistente de importação CSV */}
+      <ImportWizard open={importOpen} onClose={() => setImportOpen(false)} />
 
       {/* Modal excluir */}
       <Modal open={!!toDelete} onClose={() => setToDelete(null)} title="Excluir cliente">
