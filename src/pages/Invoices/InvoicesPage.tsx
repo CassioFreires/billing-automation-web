@@ -1,11 +1,14 @@
 import React, { useState } from "react";
-import { Plus, Send, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle, Copy, Check, CheckCircle2 } from "lucide-react";
+import { Plus, Send, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle, Copy, Check, CheckCircle2, Trash2 } from "lucide-react";
 import { isAxiosError } from "axios";
 import { Modal } from "../../components/ui/Modal";
 import { useInvoices, useCreateInvoice, useTriggerNotification } from "../../hooks/useInvoices";
 import { useClients } from "../../hooks/useClients";
-import type { Invoice, InvoiceInput } from "../../services/invoices.service";
+import type { Invoice, InvoiceInput, InvoiceItem } from "../../services/invoices.service";
 import { formatBRL, formatDate } from "../../lib/format";
+
+const newItem = (): InvoiceItem => ({ description: "", quantity: 1, unitPrice: 0 });
+const itemsTotal = (items: InvoiceItem[]) => items.reduce((s, i) => s + (i.quantity || 0) * (i.unitPrice || 0), 0);
 
 const FILTERS = [
   { label: "Todas", value: "" },
@@ -22,7 +25,7 @@ const statusBadge: Record<string, string> = {
 };
 const statusLabel: Record<string, string> = { PAID: "Pago", PENDING: "Pendente", OVERDUE: "Vencido", FAILED: "Falhou" };
 
-const EMPTY_FORM: InvoiceInput = { clientId: "", value: 0, dueDate: "" };
+const EMPTY_FORM: InvoiceInput = { clientId: "", dueDate: "", items: [newItem()] };
 
 // Uma fatura PAGA não é cobrável nem exibe dados de pagamento (PIX/checkout).
 const isPaid = (status: string) => status === "PAID";
@@ -54,19 +57,26 @@ export const InvoicesPage: React.FC = () => {
   const [copied, setCopied] = useState(false);
 
   const openCreate = () => {
-    setForm(EMPTY_FORM);
+    setForm({ clientId: "", dueDate: "", items: [newItem()] });
     setFormError(null);
     setFormOpen(true);
   };
+
+  const addItem = () => setForm((f) => ({ ...f, items: [...f.items, newItem()] }));
+  const removeItem = (idx: number) =>
+    setForm((f) => ({ ...f, items: f.items.length > 1 ? f.items.filter((_, i) => i !== idx) : f.items }));
+  const updateItem = (idx: number, patch: Partial<InvoiceItem>) =>
+    setForm((f) => ({ ...f, items: f.items.map((it, i) => (i === idx ? { ...it, ...patch } : it)) }));
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
     if (!form.clientId) return setFormError("Selecione um cliente.");
-    if (!form.value || form.value <= 0) return setFormError("O valor deve ser maior que zero.");
     if (!form.dueDate) return setFormError("Informe a data de vencimento.");
+    const valid = form.items.filter((i) => i.description.trim() && i.unitPrice > 0 && i.quantity > 0);
+    if (valid.length === 0) return setFormError("Adicione ao menos um item com descrição e valor.");
     try {
-      await createInvoice.mutateAsync({ ...form, value: Number(form.value) });
+      await createInvoice.mutateAsync({ clientId: form.clientId, dueDate: form.dueDate, items: valid });
       setFormOpen(false);
       setPage(1);
     } catch (err) {
@@ -236,13 +246,32 @@ export const InvoicesPage: React.FC = () => {
             )}
           </label>
           <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Valor (R$)</span>
-            <input type="number" step="0.01" min="0" className={inputClass} value={form.value || ""} onChange={(e) => setForm({ ...form, value: parseFloat(e.target.value) })} placeholder="150.00" />
-          </label>
-          <label className="block space-y-1.5">
             <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Vencimento</span>
             <input type="date" className={inputClass} value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
           </label>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Itens</span>
+              <button type="button" onClick={addItem} className="focus-ring text-xs text-brand-primary hover:text-brand-hover flex items-center gap-1">
+                <Plus className="h-3.5 w-3.5" /> Adicionar item
+              </button>
+            </div>
+            {form.items.map((it, idx) => (
+              <div key={idx} className="flex gap-2 items-center">
+                <input className={`${inputClass} flex-1`} placeholder="Descrição" value={it.description} onChange={(e) => updateItem(idx, { description: e.target.value })} />
+                <input type="number" min="1" className={`${inputClass} w-14 text-center`} title="Qtd" value={it.quantity || ""} onChange={(e) => updateItem(idx, { quantity: parseInt(e.target.value) || 0 })} />
+                <input type="number" step="0.01" min="0" className={`${inputClass} w-24`} placeholder="R$" value={it.unitPrice || ""} onChange={(e) => updateItem(idx, { unitPrice: parseFloat(e.target.value) || 0 })} />
+                <button type="button" onClick={() => removeItem(idx)} disabled={form.items.length === 1} className="focus-ring p-2 text-text-faint hover:text-rose-300 disabled:opacity-30" aria-label="Remover item">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+            <div className="flex justify-between pt-1 text-sm border-t border-border-subtle/60 mt-1">
+              <span className="text-text-muted pt-2">Total</span>
+              <span className="font-mono font-semibold pt-2">{formatBRL(itemsTotal(form.items))}</span>
+            </div>
+          </div>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setFormOpen(false)} className="focus-ring flex-1 border border-border-subtle hover:bg-bg-elevated rounded-xl py-2.5 text-sm font-medium transition-all">Cancelar</button>
             <button type="submit" disabled={createInvoice.isPending || clients.length === 0} className="focus-ring flex-1 bg-brand-primary hover:bg-brand-hover text-white font-semibold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60">
@@ -265,6 +294,20 @@ export const InvoicesPage: React.FC = () => {
                 </span>
               </div>
             </div>
+
+            {detail.items && detail.items.length > 0 && (
+              <div>
+                <p className="text-xs text-text-muted uppercase tracking-wider mb-1.5">Itens</p>
+                <div className="rounded-xl border border-border-subtle/60 divide-y divide-border-subtle/50">
+                  {detail.items.map((it, i) => (
+                    <div key={i} className="flex justify-between px-3 py-2 text-sm">
+                      <span className="text-text-muted">{it.quantity}× {it.description}</span>
+                      <span className="font-mono">{formatBRL(it.quantity * it.unitPrice)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {isPaid(detail.status) ? (
               /* Fatura paga: sem PIX/checkout — mostra a confirmação. */
