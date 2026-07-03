@@ -1,5 +1,12 @@
 import api from "./api";
 
+export interface InvoiceItem {
+  id?: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+}
+
 export interface Invoice {
   id: string;
   value: number;
@@ -13,12 +20,13 @@ export interface Invoice {
   createdAt?: string;
   clientId?: string;
   client?: { id?: string; name?: string; phone?: string; document?: string; status?: string };
+  items?: InvoiceItem[];
 }
 
 export interface InvoiceInput {
   clientId: string;
-  value: number;
   dueDate: string; // ISO (YYYY-MM-DD)
+  items: InvoiceItem[]; // total = soma(quantity * unitPrice)
 }
 
 export interface InvoiceMeta {
