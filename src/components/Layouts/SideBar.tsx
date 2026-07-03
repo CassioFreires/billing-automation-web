@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Users, Receipt, Settings, Menu, X, Bot, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, Receipt, Repeat, Settings, Menu, X, Bot, LogOut } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
 
 const menuItems = [
   { to: "/dashboard", label: "Painel Geral", icon: LayoutDashboard },
   { to: "/clients", label: "Clientes", icon: Users },
   { to: "/invoices", label: "Faturas", icon: Receipt },
+  { to: "/subscriptions", label: "Assinaturas", icon: Repeat },
   { to: "/settings", label: "Configurações", icon: Settings },
 ];
 
