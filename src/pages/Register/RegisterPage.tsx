@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Bot, Building2, User, Mail, Lock, Loader2, AlertCircle } from "lucide-react";
+import { Building2, User, Mail, Lock, Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
 import { isAxiosError } from "axios";
+import { Logo } from "../../components/Logo";
 
 export const RegisterPage: React.FC = () => {
   const { register } = useAuth();
@@ -51,10 +52,10 @@ export const RegisterPage: React.FC = () => {
       <div className="w-full max-w-md animate-fade-in-up">
         <div className="flex flex-col items-center mb-8">
           <div className="h-14 w-14 rounded-2xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center mb-4">
-            <Bot className="h-7 w-7 text-brand-primary" />
+            <Logo size={32} />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">
-            AUTO<span className="text-brand-primary">CORE</span>
+            Adim<span className="text-brand-primary">plo</span>
           </h1>
           <p className="text-text-muted text-sm mt-1">Crie sua conta grátis</p>
         </div>

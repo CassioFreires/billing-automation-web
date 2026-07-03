@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Users, Receipt, Repeat, Settings, Menu, X, Bot, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, Receipt, Repeat, Settings, Menu, X, LogOut } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
+import { LogoWordmark } from "../Logo";
 
 const menuItems = [
   { to: "/dashboard", label: "Painel Geral", icon: LayoutDashboard },
@@ -26,12 +27,7 @@ export const Sidebar: React.FC = () => {
     <>
       {/* Navbar Mobile */}
       <div className="lg:hidden bg-bg-card h-16 w-full flex items-center justify-between px-4 border-b border-border-subtle fixed top-0 left-0 z-50">
-        <div className="flex items-center gap-2">
-          <Bot className="h-6 w-6 text-brand-primary" />
-          <span className="font-bold text-md tracking-wider">
-            AUTO<span className="text-brand-primary">CORE</span>
-          </span>
-        </div>
+        <LogoWordmark size={24} />
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="focus-ring text-white"
@@ -48,11 +44,8 @@ export const Sidebar: React.FC = () => {
         } lg:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col justify-between`}
       >
         <div>
-          <div className="hidden lg:flex items-center gap-2 mb-10 pt-2">
-            <Bot className="h-7 w-7 text-brand-primary" />
-            <span className="font-bold text-xl tracking-wider">
-              AUTO<span className="text-brand-primary">CORE</span>
-            </span>
+          <div className="hidden lg:flex mb-10 pt-2">
+            <LogoWordmark size={30} />
           </div>
 
           <nav className="space-y-1.5">

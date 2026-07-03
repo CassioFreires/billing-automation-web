@@ -1,7 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import {
-  Bot,
   MessageSquare,
   Zap,
   ShieldCheck,
@@ -12,9 +11,10 @@ import {
   Users,
   CreditCard,
 } from "lucide-react";
+import { LogoWordmark } from "../../components/Logo";
 
 /* ============================================================================
- * Landing comercial AUTOCORE (pública, rota /). Dark premium, responsiva.
+ * Landing comercial Adimplo (pública, rota /). Dark premium, responsiva.
  * Seções: Nav · Hero · Logos · Features · Como funciona · Planos · CTA · Footer
  * ========================================================================== */
 
@@ -75,11 +75,8 @@ const plans: Plan[] = [
 const Nav: React.FC = () => (
   <header className="sticky top-0 z-40 backdrop-blur-md bg-bg-main/70 border-b border-border-subtle/60">
     <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-      <Link to="/" className="flex items-center gap-2">
-        <Bot className="h-6 w-6 text-brand-primary" />
-        <span className="font-bold text-lg tracking-wider">
-          AUTO<span className="text-brand-primary">CORE</span>
-        </span>
+      <Link to="/">
+        <LogoWordmark size={26} />
       </Link>
       <nav className="hidden md:flex items-center gap-8 text-sm text-text-muted">
         <a href="#recursos" className="hover:text-white transition-colors">Recursos</a>
@@ -113,7 +110,7 @@ const Hero: React.FC = () => (
           </span>
         </h1>
         <p className="mt-5 text-lg text-text-muted max-w-lg">
-          O AUTOCORE identifica quem está em atraso, dispara a cobrança no WhatsApp e confirma o
+          O Adimplo identifica quem está em atraso, dispara a cobrança no WhatsApp e confirma o
           pagamento sozinho. Você configura uma vez — ele trabalha todo dia.
         </p>
         <div className="mt-8 flex flex-col sm:flex-row gap-3">
@@ -292,13 +289,8 @@ const FinalCTA: React.FC = () => (
 const Footer: React.FC = () => (
   <footer className="border-t border-border-subtle/60">
     <div className="max-w-6xl mx-auto px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-text-faint">
-      <div className="flex items-center gap-2">
-        <Bot className="h-5 w-5 text-brand-primary" />
-        <span className="font-bold tracking-wider text-text-muted">
-          AUTO<span className="text-brand-primary">CORE</span>
-        </span>
-      </div>
-      <p>© {new Date().getFullYear()} AUTOCORE. Todos os direitos reservados.</p>
+      <LogoWordmark size={22} />
+      <p>© {new Date().getFullYear()} Adimplo. Todos os direitos reservados.</p>
       <div className="flex items-center gap-5">
         <Link to="/login" className="hover:text-white transition-colors">Entrar</Link>
         <Link to="/register" className="hover:text-white transition-colors">Criar conta</Link>
