@@ -12,6 +12,7 @@ const RegisterPage = lazy(() => import("./pages/Register/RegisterPage").then((m)
 const DashboardPage = lazy(() => import("./pages/Dashboard/Dashboard").then((m) => ({ default: m.DashboardPage })));
 const ClientsPage = lazy(() => import("./pages/Clients/ClientsPage").then((m) => ({ default: m.ClientsPage })));
 const InvoicesPage = lazy(() => import("./pages/Invoices/InvoicesPage").then((m) => ({ default: m.InvoicesPage })));
+const SubscriptionsPage = lazy(() => import("./pages/Subscriptions/SubscriptionsPage").then((m) => ({ default: m.SubscriptionsPage })));
 const SettingsPage = lazy(() => import("./pages/Settings/SettingsPage").then((m) => ({ default: m.SettingsPage })));
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/clients" element={<ClientsPage />} />
             <Route path="/invoices" element={<InvoicesPage />} />
+            <Route path="/subscriptions" element={<SubscriptionsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Route>
