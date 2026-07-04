@@ -1,0 +1,2 @@
+# Scripts shell precisam de quebra de linha LF (senão o Git Bash quebra com ^M).
+*.sh text eol=lf
