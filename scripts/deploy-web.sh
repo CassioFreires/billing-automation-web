@@ -48,6 +48,10 @@ cd "$REPO_ROOT"
 TARBALL="/tmp/adimplo-dist-$$.tar.gz"
 trap 'rm -f "$TARBALL"' EXIT
 
+# Aceita a chave do host na 1a conexão sem travar num prompt interativo
+# (ainda protege contra troca de chave depois — accept-new, não "no").
+SSH_OPTS=(-o StrictHostKeyChecking=accept-new)
+
 # ---- 1) Build ---------------------------------------------------------------
 log "Buildando o frontend (npm run build)…"
 npm run build
@@ -60,10 +64,10 @@ tar -czf "$TARBALL" -C dist .
 
 # ---- 3) Envia e publica -----------------------------------------------------
 log "Enviando para $EC2_HOST…"
-scp -i "$EC2_KEY" "$TARBALL" "$EC2_HOST:/tmp/adimplo-dist.tar.gz"
+scp "${SSH_OPTS[@]}" -i "$EC2_KEY" "$TARBALL" "$EC2_HOST:/tmp/adimplo-dist.tar.gz"
 
 log "Publicando no EC2 (limpa a antiga e extrai a nova)…"
-ssh -i "$EC2_KEY" "$EC2_HOST" "\
+ssh "${SSH_OPTS[@]}" -i "$EC2_KEY" "$EC2_HOST" "\
   rm -rf $EC2_PATH && \
   mkdir -p $EC2_PATH && \
   tar -xzf /tmp/adimplo-dist.tar.gz -C $EC2_PATH && \
