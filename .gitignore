@@ -17,6 +17,9 @@ dist-ssr
 .env.*
 !.env.example
 
+# Config local do deploy (caminho da chave .pem, IP) — não versionar
+scripts/deploy-web.env
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
