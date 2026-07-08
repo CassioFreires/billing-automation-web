@@ -1,10 +1,13 @@
 import React, { useState } from "react";
-import { Plus, Send, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle, Copy, Check, CheckCircle2, Trash2 } from "lucide-react";
+import { Plus, Send, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle, Copy, Check, CheckCircle2, Trash2, Wallet } from "lucide-react";
 import { isAxiosError } from "axios";
 import { Modal } from "../../components/ui/Modal";
 import { useInvoices, useCreateInvoice, useTriggerNotification } from "../../hooks/useInvoices";
+import { usePayments, useRegisterPayment } from "../../hooks/usePayments";
 import { useClients } from "../../hooks/useClients";
 import type { Invoice, InvoiceInput, InvoiceItem } from "../../services/invoices.service";
+import { PAYMENT_METHODS, PAYMENT_METHOD_LABEL } from "../../services/payments.service";
+import type { PaymentMethod, RegisterPaymentInput } from "../../services/payments.service";
 import { formatBRL, formatDate } from "../../lib/format";
 
 const newItem = (): InvoiceItem => ({ description: "", quantity: 1, unitPrice: 0 });
@@ -26,6 +29,20 @@ const statusBadge: Record<string, string> = {
 const statusLabel: Record<string, string> = { PAID: "Pago", PENDING: "Pendente", OVERDUE: "Vencido", FAILED: "Falhou" };
 
 const EMPTY_FORM: InvoiceInput = { clientId: "", dueDate: "", items: [newItem()] };
+
+// Data de hoje no formato do <input type="date"> (YYYY-MM-DD, fuso local).
+const todayISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+interface SettleForm {
+  method: PaymentMethod;
+  amount: string; // vazio = usa o valor total da fatura (default do backend)
+  paidAt: string;
+  note: string;
+}
+const emptySettle = (): SettleForm => ({ method: "pix", amount: "", paidAt: todayISO(), note: "" });
 
 // Uma fatura PAGA não é cobrável nem exibe dados de pagamento (PIX/checkout).
 const isPaid = (status: string) => status === "PAID";
@@ -55,6 +72,13 @@ export const InvoicesPage: React.FC = () => {
   const [detail, setDetail] = useState<Invoice | null>(null);
   const [triggeringId, setTriggeringId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Baixa manual (recebimentos — spec 0015).
+  const [settleOpen, setSettleOpen] = useState(false);
+  const [settleForm, setSettleForm] = useState<SettleForm>(emptySettle());
+  const [settleError, setSettleError] = useState<string | null>(null);
+  const registerPayment = useRegisterPayment();
+  const { data: payments = [], isLoading: paymentsLoading } = usePayments(detail?.id ?? null);
 
   const openCreate = () => {
     setForm({ clientId: "", dueDate: "", items: [newItem()] });
@@ -97,6 +121,33 @@ export const InvoicesPage: React.FC = () => {
     navigator.clipboard?.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  };
+
+  const openSettle = () => {
+    setSettleForm(emptySettle());
+    setSettleError(null);
+    setSettleOpen(true);
+  };
+
+  const submitSettle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!detail) return;
+    setSettleError(null);
+    const input: RegisterPaymentInput = { method: settleForm.method };
+    if (settleForm.amount.trim()) {
+      const amount = parseFloat(settleForm.amount.replace(",", "."));
+      if (!(amount > 0)) return setSettleError("Informe um valor maior que zero (ou deixe em branco para o total).");
+      input.amount = amount;
+    }
+    if (settleForm.paidAt) input.paidAt = new Date(`${settleForm.paidAt}T12:00:00`).toISOString();
+    if (settleForm.note.trim()) input.note = settleForm.note.trim();
+    try {
+      const { invoice } = await registerPayment.mutateAsync({ invoiceId: detail.id, input });
+      setSettleOpen(false);
+      setDetail(invoice); // reflete a fatura já quitada no modal de detalhe
+    } catch (err) {
+      setSettleError(apiError(err, "Erro ao registrar o pagamento."));
+    }
   };
 
   const changeFilter = (value: string) => {
@@ -193,14 +244,24 @@ export const InvoicesPage: React.FC = () => {
                               <CheckCircle2 className="h-4 w-4" />
                             </span>
                           ) : (
-                            <button
-                              onClick={() => trigger(inv.id)}
-                              disabled={triggeringId === inv.id}
-                              className="focus-ring p-2 rounded-lg text-text-muted hover:text-white hover:bg-brand-primary transition-all disabled:opacity-50"
-                              aria-label="Disparar cobrança"
-                            >
-                              {triggeringId === inv.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                            </button>
+                            <>
+                              <button
+                                onClick={() => { setDetail(inv); openSettle(); }}
+                                className="focus-ring p-2 rounded-lg text-text-muted hover:text-white hover:bg-brand-success transition-all"
+                                aria-label="Dar baixa (registrar pagamento)"
+                                title="Dar baixa"
+                              >
+                                <Wallet className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => trigger(inv.id)}
+                                disabled={triggeringId === inv.id}
+                                className="focus-ring p-2 rounded-lg text-text-muted hover:text-white hover:bg-brand-primary transition-all disabled:opacity-50"
+                                aria-label="Disparar cobrança"
+                              >
+                                {triggeringId === inv.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>
@@ -340,9 +401,106 @@ export const InvoicesPage: React.FC = () => {
                 ) : (
                   <p className="text-sm text-text-faint">Sem dados de PIX para esta cobrança.</p>
                 )}
+                <button
+                  onClick={openSettle}
+                  className="focus-ring w-full bg-brand-success/90 hover:bg-brand-success text-white font-semibold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                >
+                  <Wallet className="h-4 w-4" /> Dar baixa (registrar pagamento)
+                </button>
               </>
             )}
+
+            {/* Recebimentos da fatura (spec 0015). */}
+            <div>
+              <p className="text-xs text-text-muted uppercase tracking-wider mb-1.5">Recebimentos</p>
+              {paymentsLoading ? (
+                <div className="h-10 rounded-xl bg-bg-main/60 animate-pulse" />
+              ) : payments.length === 0 ? (
+                <p className="text-sm text-text-faint">Nenhum recebimento registrado.</p>
+              ) : (
+                <div className="rounded-xl border border-border-subtle/60 divide-y divide-border-subtle/50">
+                  {payments.map((p) => (
+                    <div key={p.id} className="flex items-center justify-between px-3 py-2 text-sm">
+                      <div className="flex flex-col">
+                        <span className="text-text-muted">
+                          {p.method ? PAYMENT_METHOD_LABEL[p.method as PaymentMethod] ?? p.method : "—"}
+                          <span className="text-text-faint"> · {p.source === "gateway" ? "gateway" : "manual"}</span>
+                        </span>
+                        <span className="text-text-faint text-xs">{formatDate(p.paidAt)}{p.note ? ` · ${p.note}` : ""}</span>
+                      </div>
+                      <span className="font-mono font-semibold text-brand-success">{formatBRL(p.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
+        )}
+      </Modal>
+
+      {/* Modal baixa manual (recebimentos) */}
+      <Modal open={settleOpen} onClose={() => setSettleOpen(false)} title="Dar baixa">
+        {detail && (
+          <form onSubmit={submitSettle} className="space-y-4">
+            {settleError && (
+              <div className="flex items-start gap-2 bg-brand-danger/10 border border-brand-danger/20 text-rose-300 text-sm rounded-xl px-3.5 py-2.5">
+                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" /><span>{settleError}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between bg-bg-main/50 border border-border-subtle/60 rounded-xl px-3.5 py-2.5">
+              <span className="text-text-muted text-sm">{detail.client?.name ?? "Fatura"}</span>
+              <span className="font-mono font-semibold">{formatBRL(detail.value)}</span>
+            </div>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Meio de pagamento</span>
+              <select
+                className={inputClass}
+                value={settleForm.method}
+                onChange={(e) => setSettleForm({ ...settleForm, method: e.target.value as PaymentMethod })}
+              >
+                {PAYMENT_METHODS.map((m) => (
+                  <option key={m} value={m}>{PAYMENT_METHOD_LABEL[m]}</option>
+                ))}
+              </select>
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block space-y-1.5">
+                <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Valor</span>
+                <input
+                  type="number" step="0.01" min="0"
+                  className={inputClass}
+                  placeholder={formatBRL(detail.value)}
+                  value={settleForm.amount}
+                  onChange={(e) => setSettleForm({ ...settleForm, amount: e.target.value })}
+                />
+              </label>
+              <label className="block space-y-1.5">
+                <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Data</span>
+                <input
+                  type="date"
+                  className={inputClass}
+                  value={settleForm.paidAt}
+                  onChange={(e) => setSettleForm({ ...settleForm, paidAt: e.target.value })}
+                />
+              </label>
+            </div>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Observação (opcional)</span>
+              <input
+                className={inputClass}
+                placeholder="Ex.: pago na recepção"
+                value={settleForm.note}
+                onChange={(e) => setSettleForm({ ...settleForm, note: e.target.value })}
+              />
+            </label>
+            <p className="text-xs text-text-faint">Deixe o valor em branco para quitar pelo total da fatura.</p>
+            <div className="flex gap-3 pt-1">
+              <button type="button" onClick={() => setSettleOpen(false)} className="focus-ring flex-1 border border-border-subtle hover:bg-bg-elevated rounded-xl py-2.5 text-sm font-medium transition-all">Cancelar</button>
+              <button type="submit" disabled={registerPayment.isPending} className="focus-ring flex-1 bg-brand-success/90 hover:bg-brand-success text-white font-semibold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60">
+                {registerPayment.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Confirmar baixa
+              </button>
+            </div>
+          </form>
         )}
       </Modal>
     </div>
