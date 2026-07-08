@@ -5,9 +5,15 @@
 # Filosofia: NÃO se builda em produção e NÃO se versiona artefato.
 #   1. Builda o dist AQUI (com RAM sobrando).
 #   2. Empacota e envia por SSH.
-#   3. No EC2, limpa a pasta antiga e extrai a nova (o Caddy serve /srv,
+#   3. No EC2, esvazia o CONTEÚDO da pasta e extrai a nova (o Caddy serve /srv,
 #      que é um bind-mount de ./frontend/dist — pega os arquivos novos na hora,
 #      sem precisar reiniciar nada).
+#
+# ⚠️ NUNCA fazer `rm -rf` no PRÓPRIO diretório do bind-mount (ex.: rm -rf
+#    frontend/dist && mkdir). Isso troca o inode da pasta, e o container em
+#    execução continua preso no inode antigo (deletado) → passa a ver /srv
+#    vazio e o site cai em 404 até recriar o container. Por isso limpamos só o
+#    CONTEÚDO (find -mindepth 1 -delete), mantendo a pasta/inode original.
 #
 # Uso (no PC, pelo Git Bash):
 #   ./scripts/deploy-web.sh
@@ -66,10 +72,13 @@ tar -czf "$TARBALL" -C dist .
 log "Enviando para $EC2_HOST…"
 scp "${SSH_OPTS[@]}" -i "$EC2_KEY" "$TARBALL" "$EC2_HOST:/tmp/adimplo-dist.tar.gz"
 
-log "Publicando no EC2 (limpa a antiga e extrai a nova)…"
+log "Publicando no EC2 (esvazia o conteúdo e extrai a nova)…"
+# IMPORTANTE: `find -mindepth 1 -delete` apaga o CONTEÚDO mas preserva a pasta
+# (mesmo inode), então o bind-mount do Caddy continua válido — sem 404, sem
+# recriar container. NÃO trocar por `rm -rf $EC2_PATH` (ver comentário no topo).
 ssh "${SSH_OPTS[@]}" -i "$EC2_KEY" "$EC2_HOST" "\
-  rm -rf $EC2_PATH && \
   mkdir -p $EC2_PATH && \
+  find $EC2_PATH -mindepth 1 -delete && \
   tar -xzf /tmp/adimplo-dist.tar.gz -C $EC2_PATH && \
   rm -f /tmp/adimplo-dist.tar.gz"
 
