@@ -16,6 +16,12 @@ export default defineConfig(({ mode }) => {
         "/api": {
           target: apiTarget,
           changeOrigin: true,
+          // Verificação do certificado TLS do upstream:
+          //  - LOCAL (mode "development"): false — contorna proxy corporativo
+          //    que intercepta TLS (CA interna que o Node não conhece).
+          //  - PROD (mode "production"): true — valida o certificado.
+          // (Vale só para o dev server do Vite — produção usa o Caddy, não isto.)
+          secure: mode === "production",
         },
       },
     },
