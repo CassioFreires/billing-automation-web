@@ -1,78 +1,79 @@
-import React, { useMemo } from "react";
-import { TrendingUp, AlertTriangle, MessageSquare, CheckCircle, Send } from "lucide-react";
-import { useInvoices } from "../../hooks/useInvoices";
+import React, { useState } from "react";
+import {
+  Wallet,
+  AlertTriangle,
+  TrendingUp,
+  Percent,
+  CalendarClock,
+  MousePointerClick,
+  Layers,
+} from "lucide-react";
+import { useCockpit } from "../../hooks/useCockpit";
 import { formatBRL, formatDate } from "../../lib/format";
 
-interface Invoice {
-  id: string;
-  value: number;
-  status: string;
-  dueDate: string;
-  paidAt?: string | null;
-  notificationSent?: boolean;
-  createdAt?: string;
-  client?: { name?: string };
-}
+const PERIODS = [7, 30, 90] as const;
 
-const statusBadge: Record<string, string> = {
-  PAID: "text-brand-success bg-emerald-500/10 border-emerald-500/20",
-  PENDING: "text-brand-warning bg-amber-500/10 border-amber-500/20",
-  OVERDUE: "text-rose-400 bg-rose-500/10 border-rose-500/20",
-  FAILED: "text-text-muted bg-bg-elevated border-border-subtle",
-};
-
-const statusLabel: Record<string, string> = {
-  PAID: "Pago",
-  PENDING: "Pendente",
-  OVERDUE: "Vencido",
-  FAILED: "Falhou",
-};
+/** Um balde do aging: cor + rótulo. */
+const AGING = [
+  { key: "aVencer", label: "A vencer", color: "bg-brand-primary", text: "text-brand-primary" },
+  { key: "d0a30", label: "0–30 dias", color: "bg-amber-400", text: "text-amber-400" },
+  { key: "d31a60", label: "31–60 dias", color: "bg-orange-500", text: "text-orange-500" },
+  { key: "d60mais", label: "60+ dias", color: "bg-rose-500", text: "text-rose-500" },
+] as const;
 
 export const DashboardPage: React.FC = () => {
-  const { data, isLoading, error } = useInvoices({ page: 1, limit: 500 });
-  const invoices: Invoice[] = data?.invoices ?? [];
-
-  const metrics = useMemo(() => {
-    const paid = invoices.filter((i) => i.status === "PAID");
-    const open = invoices.filter((i) => i.status === "PENDING" || i.status === "OVERDUE");
-    const recuperado = paid.reduce((s, i) => s + (i.value || 0), 0);
-    const emAberto = open.reduce((s, i) => s + (i.value || 0), 0);
-    const notificados = invoices.filter((i) => i.notificationSent).length;
-    const taxa = invoices.length ? (paid.length / invoices.length) * 100 : 0;
-    return { recuperado, emAberto, pagas: paid.length, notificados, taxa };
-  }, [invoices]);
-
-  const recentes = useMemo(() => invoices.slice(0, 6), [invoices]);
+  const [days, setDays] = useState<number>(30);
+  const { data, isLoading, error } = useCockpit(days);
 
   if (error) {
     return (
       <div className="mt-12 animate-fade-in text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-2xl p-6">
-        Não foi possível carregar os dados. Verifique sua conexão/sessão.
+        Não foi possível carregar o Cockpit. Verifique sua conexão/sessão.
       </div>
     );
   }
 
+  const k = data?.kpis;
+  const aging = data?.aging;
+  const agingTotal = aging ? aging.aVencer + aging.d0a30 + aging.d31a60 + aging.d60mais : 0;
+
   const cards = [
-    { label: "Recuperado", value: formatBRL(metrics.recuperado), icon: TrendingUp, color: "text-brand-success", bg: "bg-brand-success/10" },
-    { label: "Em aberto", value: formatBRL(metrics.emAberto), icon: AlertTriangle, color: "text-brand-warning", bg: "bg-brand-warning/10" },
-    { label: "Disparos enviados", value: String(metrics.notificados), icon: MessageSquare, color: "text-brand-primary", bg: "bg-brand-primary/10" },
-    { label: "Taxa de recebimento", value: `${metrics.taxa.toFixed(1)}%`, icon: CheckCircle, color: "text-white", bg: "bg-bg-elevated" },
+    { label: "A receber", value: k ? formatBRL(k.aReceber) : "—", icon: Wallet, color: "text-brand-primary", bg: "bg-brand-primary/10" },
+    { label: "Em atraso", value: k ? formatBRL(k.emAtraso) : "—", icon: AlertTriangle, color: "text-rose-400", bg: "bg-rose-500/10" },
+    { label: `Recebido (${days}d)`, value: k ? formatBRL(k.recebidoNoPeriodo) : "—", icon: TrendingUp, color: "text-brand-success", bg: "bg-brand-success/10" },
+    { label: "Inadimplência", value: k ? `${(k.taxaInadimplencia * 100).toFixed(1)}%` : "—", icon: Percent, color: "text-brand-warning", bg: "bg-brand-warning/10" },
   ];
 
   return (
     <div className="space-y-8 animate-fade-in mt-12">
-      <div>
-        <h1 className="text-3xl font-extrabold tracking-tight">Painel de Automações</h1>
-        <p className="text-text-muted text-sm mt-1">Saúde financeira e disparos do seu WhatsApp em tempo real.</p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight">Cockpit</h1>
+          <p className="text-text-muted text-sm mt-1">O raio-x do seu caixa: quanto entra, quanto atrasa e o que fazer hoje.</p>
+        </div>
+        {/* Seletor de período (janela dos recebidos) */}
+        <div className="flex items-center gap-1 bg-bg-card border border-border-subtle/60 rounded-xl p-1">
+          {PERIODS.map((p) => (
+            <button
+              key={p}
+              onClick={() => setDays(p)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
+                days === p ? "bg-brand-primary/15 text-brand-primary" : "text-text-muted hover:text-white"
+              }`}
+            >
+              {p}d
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Cards métricos */}
+      {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         {cards.map((c) => (
           <div key={c.label} className="bg-bg-card p-6 rounded-2xl border border-border-subtle/60 flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-text-muted uppercase tracking-wider">{c.label}</p>
-              {isLoading ? (
+              {isLoading && !data ? (
                 <div className="h-7 w-24 mt-2 rounded bg-bg-elevated animate-pulse" />
               ) : (
                 <p className={`text-2xl font-black mt-1 ${c.color}`}>{c.value}</p>
@@ -85,39 +86,114 @@ export const DashboardPage: React.FC = () => {
         ))}
       </div>
 
-      {/* Faturas recentes */}
+      {/* Aging — envelhecimento da carteira */}
       <div className="bg-bg-card border border-border-subtle/60 rounded-2xl p-6">
         <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-          <Send className="h-4 w-4 text-brand-primary" /> Faturas recentes
+          <Layers className="h-4 w-4 text-brand-primary" /> Envelhecimento (aging)
         </h3>
-
-        {isLoading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-12 rounded-xl bg-bg-main/60 animate-pulse" />
-            ))}
-          </div>
-        ) : recentes.length === 0 ? (
-          <p className="text-sm text-text-muted py-6 text-center">Nenhuma fatura ainda. Crie uma cobrança para começar.</p>
+        {isLoading && !data ? (
+          <div className="h-4 rounded-full bg-bg-elevated animate-pulse" />
+        ) : agingTotal <= 0 ? (
+          <p className="text-sm text-text-muted py-2">Nada em aberto. 🎉</p>
         ) : (
-          <div className="space-y-2.5">
-            {recentes.map((inv) => (
-              <div key={inv.id} className="flex items-center justify-between rounded-xl bg-bg-main/50 border border-border-subtle/60 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{inv.client?.name ?? "Cliente"}</p>
-                  <p className="text-xs text-text-faint">Venc: {formatDate(inv.dueDate)}</p>
-                </div>
-                <div className="flex items-center gap-4 shrink-0">
-                  <span className="text-sm font-semibold font-mono">{formatBRL(inv.value)}</span>
-                  <span className={`text-xs px-2.5 py-0.5 rounded-full border ${statusBadge[inv.status] ?? statusBadge.FAILED}`}>
-                    {statusLabel[inv.status] ?? inv.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <>
+            <div className="flex h-4 w-full overflow-hidden rounded-full bg-bg-main">
+              {AGING.map((b) => {
+                const val = (aging as Record<string, number>)[b.key] ?? 0;
+                const pct = (val / agingTotal) * 100;
+                return pct > 0 ? <div key={b.key} className={b.color} style={{ width: `${pct}%` }} title={`${b.label}: ${formatBRL(val)}`} /> : null;
+              })}
+            </div>
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {AGING.map((b) => {
+                const val = (aging as Record<string, number>)[b.key] ?? 0;
+                return (
+                  <div key={b.key} className="rounded-xl bg-bg-main/50 border border-border-subtle/60 px-3 py-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`h-2 w-2 rounded-full ${b.color}`} />
+                      <span className="text-[11px] text-text-muted">{b.label}</span>
+                    </div>
+                    <p className={`text-sm font-bold font-mono mt-1 ${b.text}`}>{formatBRL(val)}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
+
+      {/* Ações do dia */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Vence essa semana */}
+        <div className="bg-bg-card border border-border-subtle/60 rounded-2xl p-6">
+          <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+            <CalendarClock className="h-4 w-4 text-brand-warning" /> Vence essa semana
+          </h3>
+          <ActionList
+            loading={isLoading && !data}
+            empty="Nada vencendo nos próximos 7 dias."
+            items={(data?.acoes.vencemEssaSemana ?? []).map((i) => ({
+              id: i.invoiceId,
+              title: i.clientName,
+              subtitle: `Venc: ${formatDate(i.dueDate)}`,
+              value: formatBRL(i.value),
+            }))}
+          />
+        </div>
+
+        {/* Hesitando — o sinal do Elo */}
+        <div className="bg-bg-card border border-border-subtle/60 rounded-2xl p-6">
+          <h3 className="font-bold text-lg mb-1 flex items-center gap-2">
+            <MousePointerClick className="h-4 w-4 text-brand-primary" /> Hesitando
+          </h3>
+          <p className="text-xs text-text-faint mb-4">Abriram o link de cobrança e ainda não pagaram — candidatos a uma oferta de alívio.</p>
+          <ActionList
+            loading={isLoading && !data}
+            empty="Ninguém hesitando por enquanto."
+            items={(data?.acoes.hesitando ?? []).map((i) => ({
+              id: i.invoiceId,
+              title: i.clientName,
+              subtitle: `Abriu ${i.opens}× · não pagou`,
+              value: formatBRL(i.value),
+            }))}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface ActionItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  value: string;
+}
+
+const ActionList: React.FC<{ loading: boolean; empty: string; items: ActionItem[] }> = ({ loading, empty, items }) => {
+  if (loading) {
+    return (
+      <div className="space-y-2.5">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="h-12 rounded-xl bg-bg-main/60 animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+  if (items.length === 0) {
+    return <p className="text-sm text-text-muted py-6 text-center">{empty}</p>;
+  }
+  return (
+    <div className="space-y-2.5">
+      {items.map((it) => (
+        <div key={it.id} className="flex items-center justify-between rounded-xl bg-bg-main/50 border border-border-subtle/60 px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium truncate">{it.title}</p>
+            <p className="text-xs text-text-faint">{it.subtitle}</p>
+          </div>
+          <span className="text-sm font-semibold font-mono shrink-0">{it.value}</span>
+        </div>
+      ))}
     </div>
   );
 };
