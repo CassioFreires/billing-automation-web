@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Users, Receipt, Repeat, Settings, Gem, Menu, X, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, Receipt, Repeat, Settings, Gem, Shield, Menu, X, LogOut } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
+import { useAdminMe } from "../../hooks/useAdmin";
 import { LogoWordmark } from "../Logo";
 
 const menuItems = [
@@ -16,6 +17,9 @@ const menuItems = [
 export const Sidebar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { logout } = useAuth();
+  // Item "Admin" só aparece para super-admin (backend reconhece via /admin/me).
+  const { isSuccess: isAdmin } = useAdminMe();
+  const items = isAdmin ? [...menuItems, { to: "/admin", label: "Admin", icon: Shield }] : menuItems;
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `w-full flex items-center gap-4 px-4 py-3 rounded-xl font-medium text-sm transition-all ${
@@ -50,7 +54,7 @@ export const Sidebar: React.FC = () => {
           </div>
 
           <nav className="space-y-1.5">
-            {menuItems.map(({ to, label, icon: Icon }) => (
+            {items.map(({ to, label, icon: Icon }) => (
               <NavLink
                 key={to}
                 to={to}
