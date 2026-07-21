@@ -11,16 +11,58 @@ import {
 } from "../../hooks/useSettings";
 import type {
   PaymentProvider,
-  PaymentSettings,
+  PaymentCredentials,
   WhatsappProvider,
   NegotiationSettings,
 } from "../../services/settings.service";
 
 const PROVIDERS: { value: PaymentProvider; label: string; desc: string }[] = [
   { value: "infinitepay", label: "InfinitePay", desc: "Link de checkout (PIX + cartão). Só precisa do seu handle." },
-  { value: "mercadopago", label: "Mercado Pago", desc: "Checkout Pro (em breve — requer token da sua conta)." },
+  { value: "mercadopago", label: "Mercado Pago", desc: "Checkout Pro — PIX, boleto e cartão. Requer token da sua conta." },
+  { value: "asaas", label: "Asaas", desc: "PIX, boleto e cartão. Muito usado por PMEs. Requer API Key." },
+  { value: "pagbank", label: "PagBank / PagSeguro", desc: "PIX, boleto e cartão. Requer token de API." },
+  { value: "efi", label: "Efí (Gerencianet)", desc: "PIX/boleto/cartão. Requer Client ID e Secret (PIX exige certificado)." },
+  { value: "stripe", label: "Stripe", desc: "Checkout internacional. Requer Secret Key e Webhook Secret." },
+  { value: "pagarme", label: "Pagar.me", desc: "PIX, boleto e cartão (Stone). Requer Secret Key." },
   { value: "mock", label: "Simulado (teste)", desc: "Não cobra de verdade — para testes." },
 ];
+
+/** Campos de credencial (write-only) por provider. `secret` mascara no input. */
+type CredField = {
+  key: keyof PaymentCredentials;
+  label: string;
+  placeholder?: string;
+  help?: string;
+  optional?: boolean;
+};
+
+const PROVIDER_FIELDS: Record<PaymentProvider, CredField[]> = {
+  infinitepay: [], // handle é público, tratado à parte
+  mock: [],
+  mercadopago: [
+    { key: "accessToken", label: "Access Token", help: "Token de acesso da sua conta Mercado Pago." },
+    { key: "webhookSecret", label: "Webhook Secret", help: "Chave secreta para validar a assinatura do webhook." },
+  ],
+  asaas: [
+    { key: "apiKey", label: "API Key", help: "Chave de API da sua conta Asaas." },
+    { key: "webhookToken", label: "Token do Webhook", help: "Token configurado no painel do Asaas (header asaas-access-token)." },
+  ],
+  pagbank: [{ key: "token", label: "Token", help: "Token de API do PagBank / PagSeguro." }],
+  efi: [
+    { key: "clientId", label: "Client ID" },
+    { key: "clientSecret", label: "Client Secret" },
+    { key: "webhookToken", label: "Token do Webhook" },
+    { key: "certificateBase64", label: "Certificado (base64)", optional: true, help: "Opcional — necessário só para PIX (mTLS)." },
+  ],
+  stripe: [
+    { key: "secretKey", label: "Secret Key", placeholder: "sk_live_... ou sk_test_..." },
+    { key: "webhookSecret", label: "Webhook Secret", placeholder: "whsec_..." },
+  ],
+  pagarme: [
+    { key: "secretKey", label: "Secret Key" },
+    { key: "webhookSecret", label: "Webhook Secret" },
+  ],
+};
 
 function apiError(err: unknown, fallback: string): string {
   if (isAxiosError(err) && err.response?.data?.error) return String(err.response.data.error);
@@ -32,7 +74,13 @@ export const SettingsPage: React.FC = () => {
   const { data, isLoading } = usePaymentSettings();
   const updatePayment = useUpdatePaymentSettings();
 
-  const [form, setForm] = useState<PaymentSettings>({ provider: "infinitepay", infinitepayHandle: "", redirectUrl: "" });
+  const [form, setForm] = useState<{
+    provider: PaymentProvider;
+    infinitepayHandle: string;
+    redirectUrl: string;
+  }>({ provider: "infinitepay", infinitepayHandle: "", redirectUrl: "" });
+  // Segredos: write-only. Começam em branco; em branco = mantém o salvo.
+  const [creds, setCreds] = useState<PaymentCredentials>({});
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -43,8 +91,12 @@ export const SettingsPage: React.FC = () => {
         infinitepayHandle: data.infinitepayHandle ?? "",
         redirectUrl: data.redirectUrl ?? "",
       });
+      setCreds({}); // nunca traz segredo da API
     }
   }, [data]);
+
+  // "Está salvo?" só vale quando o provider salvo é o selecionado agora.
+  const savedStatus = data && data.provider === form.provider ? data.credentialStatus ?? {} : {};
 
   // --- WhatsApp ---
   const { data: waData, isLoading: waLoading } = useWhatsappSettings();
@@ -100,13 +152,28 @@ export const SettingsPage: React.FC = () => {
     if (form.provider === "infinitepay" && !form.infinitepayHandle?.trim()) {
       return setError("Informe o handle do InfinitePay (o nome no seu link de checkout).");
     }
+    // Credenciais obrigatórias do provider: exige no 1º cadastro (sem salvo).
+    const missing = PROVIDER_FIELDS[form.provider].find(
+      (f) => !f.optional && !creds[f.key]?.trim() && !savedStatus[f.key]
+    );
+    if (missing) {
+      return setError(`Informe: ${missing.label}.`);
+    }
+    // Só envia segredos digitados (em branco = mantém o salvo).
+    const credentials: PaymentCredentials = {};
+    for (const f of PROVIDER_FIELDS[form.provider]) {
+      const v = creds[f.key]?.trim();
+      if (v) credentials[f.key] = v;
+    }
     try {
       await updatePayment.mutateAsync({
         provider: form.provider,
         infinitepayHandle: form.infinitepayHandle?.trim() || null,
         redirectUrl: form.redirectUrl?.trim() || null,
+        ...(Object.keys(credentials).length ? { credentials } : {}),
       });
       setSaved(true);
+      setCreds({}); // limpa os inputs de segredo após salvar
     } catch (err) {
       setError(apiError(err, "Erro ao salvar as configurações."));
     }
@@ -224,39 +291,66 @@ export const SettingsPage: React.FC = () => {
               ))}
             </div>
 
-            {/* Campos do InfinitePay */}
+            {/* Handle público do InfinitePay */}
             {form.provider === "infinitepay" && (
-              <div className="space-y-4 pt-1">
-                <label className="block space-y-1.5">
-                  <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Handle do InfinitePay</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-text-faint font-mono shrink-0">checkout.infinitepay.io/</span>
-                    <input
-                      className={inputClass}
-                      value={form.infinitepayHandle ?? ""}
-                      onChange={(e) => setForm({ ...form, infinitepayHandle: e.target.value })}
-                      placeholder="seu-handle"
-                    />
-                  </div>
-                  <span className="text-xs text-text-faint">É o nome público que aparece no seu link de pagamento.</span>
-                </label>
-                <label className="block space-y-1.5">
-                  <span className="text-xs font-medium text-text-muted uppercase tracking-wider">URL de retorno (opcional)</span>
+              <label className="block space-y-1.5 pt-1">
+                <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Handle do InfinitePay</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-text-faint font-mono shrink-0">checkout.infinitepay.io/</span>
                   <input
                     className={inputClass}
-                    value={form.redirectUrl ?? ""}
-                    onChange={(e) => setForm({ ...form, redirectUrl: e.target.value })}
-                    placeholder="https://... (para onde o cliente volta após pagar)"
+                    value={form.infinitepayHandle ?? ""}
+                    onChange={(e) => setForm({ ...form, infinitepayHandle: e.target.value })}
+                    placeholder="seu-handle"
                   />
-                </label>
+                </div>
+                <span className="text-xs text-text-faint">É o nome público que aparece no seu link de pagamento.</span>
+              </label>
+            )}
+
+            {/* Credenciais do provider (write-only, mascaradas) */}
+            {PROVIDER_FIELDS[form.provider].length > 0 && (
+              <div className="space-y-4 pt-1">
+                {PROVIDER_FIELDS[form.provider].map((f) => (
+                  <label key={f.key} className="block space-y-1.5">
+                    <span className="text-xs font-medium text-text-muted uppercase tracking-wider">
+                      {f.label}
+                      {f.optional && <span className="text-text-faint normal-case"> (opcional)</span>}
+                    </span>
+                    <input
+                      type="password"
+                      autoComplete="off"
+                      className={inputClass}
+                      value={creds[f.key] ?? ""}
+                      onChange={(e) => setCreds((c) => ({ ...c, [f.key]: e.target.value }))}
+                      placeholder={
+                        savedStatus[f.key]
+                          ? "•••••••• (salvo — deixe em branco para manter)"
+                          : f.placeholder ?? "cole aqui"
+                      }
+                    />
+                    {f.help && <span className="text-xs text-text-faint">{f.help}</span>}
+                  </label>
+                ))}
               </div>
             )}
 
-            {form.provider === "mercadopago" && (
-              <div className="text-xs text-brand-warning bg-amber-500/10 border border-amber-500/20 rounded-xl px-3.5 py-2.5">
-                O Mercado Pago por conta própria ainda está em preparação (guarda de token com segurança). Por enquanto, use o InfinitePay.
-              </div>
+            {/* URL de retorno (opcional) — provedores com checkout hospedado */}
+            {form.provider !== "mock" && (
+              <label className="block space-y-1.5">
+                <span className="text-xs font-medium text-text-muted uppercase tracking-wider">URL de retorno (opcional)</span>
+                <input
+                  className={inputClass}
+                  value={form.redirectUrl ?? ""}
+                  onChange={(e) => setForm({ ...form, redirectUrl: e.target.value })}
+                  placeholder="https://... (para onde o cliente volta após pagar)"
+                />
+              </label>
             )}
+
+            <div className="text-xs text-text-faint bg-bg-main/40 border border-border-subtle rounded-xl px-3.5 py-2.5">
+              🔒 Suas credenciais são <strong>criptografadas</strong> antes de salvar e nunca aparecem de volta nesta tela.
+            </div>
 
             {error && (
               <div className="flex items-start gap-2 bg-brand-danger/10 border border-brand-danger/20 text-rose-300 text-sm rounded-xl px-3.5 py-2.5">

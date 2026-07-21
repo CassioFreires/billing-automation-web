@@ -1,11 +1,43 @@
 import api from "./api";
 
-export type PaymentProvider = "infinitepay" | "mercadopago" | "mock";
+/** Gateways suportados (spec 0019). */
+export type PaymentProvider =
+  | "infinitepay"
+  | "mercadopago"
+  | "mock"
+  | "asaas"
+  | "pagbank"
+  | "efi"
+  | "stripe"
+  | "pagarme";
 
+/** Segredos por provider — write-only (a API nunca os devolve). */
+export interface PaymentCredentials {
+  apiKey?: string; // asaas
+  token?: string; // pagbank
+  clientId?: string; // efi
+  clientSecret?: string; // efi
+  certificateBase64?: string; // efi (PIX/mTLS)
+  secretKey?: string; // stripe | pagarme
+  webhookSecret?: string; // stripe | pagarme | mercadopago
+  webhookToken?: string; // asaas | efi
+  accessToken?: string; // mercadopago
+}
+
+/** Leitura: sem segredos, só quais estão setados (`credentialStatus`). */
 export interface PaymentSettings {
   provider: PaymentProvider;
   infinitepayHandle?: string | null;
   redirectUrl?: string | null;
+  credentialStatus?: Partial<Record<keyof PaymentCredentials, boolean>>;
+}
+
+/** Escrita: segredos opcionais (em branco = mantém o salvo). */
+export interface PaymentSettingsInput {
+  provider: PaymentProvider;
+  infinitepayHandle?: string | null;
+  redirectUrl?: string | null;
+  credentials?: PaymentCredentials;
 }
 
 export type WhatsappProvider = "log" | "cloud";
@@ -45,7 +77,7 @@ class SettingsService {
     return response.data;
   }
 
-  async updatePayment(data: PaymentSettings): Promise<PaymentSettings> {
+  async updatePayment(data: PaymentSettingsInput): Promise<PaymentSettings> {
     const response = await api.put("/settings/payment", data);
     return response.data;
   }
