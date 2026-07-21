@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
-import { Clock, AlertCircle, Eye } from "lucide-react";
+import { Clock, AlertCircle, Eye, Rocket } from "lucide-react";
 import { Sidebar } from "./SideBar";
 import { usePlan } from "../../hooks/useBilling";
+import { useOnboarding } from "../../hooks/useOnboarding";
 import { impersonation } from "../../lib/token";
 
 /** Banner de impersonação (spec 0023): admin vendo como um tenant. */
@@ -21,6 +22,30 @@ function ImpersonationBanner() {
         Sair
       </button>
     </div>
+  );
+}
+
+/**
+ * Banner slim de onboarding (spec 0021): mostra o progresso em qualquer tela
+ * enquanto a ativação não termina. No /dashboard some — lá o checklist completo
+ * já aparece. Some também ao concluir/dispensar e durante impersonação.
+ */
+function OnboardingBanner() {
+  const { data } = useOnboarding();
+  const location = useLocation();
+  if (impersonation.current() || !data) return null;
+  if (data.completed || data.dismissed) return null;
+  if (location.pathname === "/dashboard") return null;
+
+  return (
+    <Link
+      to="/dashboard"
+      className="flex items-center justify-center gap-2 text-sm bg-brand-primary/10 text-brand-primary border-b border-brand-primary/20 px-4 py-2 hover:bg-brand-primary/15 transition-colors"
+    >
+      <Rocket className="h-4 w-4" />
+      Configuração inicial: {data.progress.done} de {data.progress.total} passos.{" "}
+      <span className="underline">Continuar</span>
+    </Link>
   );
 }
 
@@ -80,6 +105,7 @@ export function AppShell() {
       <div className="flex-1 lg:pl-64 flex flex-col">
         <ImpersonationBanner />
         <PlanBanner />
+        <OnboardingBanner />
         <main className="pt-24 lg:pt-0 p-6 sm:p-10 max-w-7xl mx-auto w-full">
           <Outlet />
         </main>

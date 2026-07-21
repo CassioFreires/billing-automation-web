@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useCockpit } from "../../hooks/useCockpit";
 import { formatBRL, formatDate } from "../../lib/format";
+import { OnboardingChecklist } from "../../components/Onboarding/OnboardingChecklist";
 
 const PERIODS = [7, 30, 90] as const;
 
@@ -46,6 +47,8 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-fade-in mt-12">
+      <OnboardingChecklist />
+
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight">Cockpit</h1>

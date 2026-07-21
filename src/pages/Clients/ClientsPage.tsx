@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Plus, Search, Pencil, Trash2, Users, Loader2, AlertCircle, UploadCloud } from "lucide-react";
 import { isAxiosError } from "axios";
 import { Modal } from "../../components/ui/Modal";
@@ -27,6 +28,7 @@ export const ClientsPage: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Client | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -52,6 +54,17 @@ export const ClientsPage: React.FC = () => {
     setFormError(null);
     setFormOpen(true);
   };
+
+  // Deep-link do onboarding (spec 0021): /clients?new=1 abre o modal de criação
+  // e limpa o parâmetro para não reabrir ao recarregar.
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      openCreate();
+      searchParams.delete("new");
+      setSearchParams(searchParams, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
