@@ -1,6 +1,7 @@
 import { Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
+import { AdminRoute } from "./auth/AdminRoute";
 import { AppShell } from "./components/Layouts/AppShell";
 import { RouteFallback } from "./components/RouteFallback";
 
@@ -15,6 +16,7 @@ const InvoicesPage = lazy(() => import("./pages/Invoices/InvoicesPage").then((m)
 const SubscriptionsPage = lazy(() => import("./pages/Subscriptions/SubscriptionsPage").then((m) => ({ default: m.SubscriptionsPage })));
 const SettingsPage = lazy(() => import("./pages/Settings/SettingsPage").then((m) => ({ default: m.SettingsPage })));
 const PlanPage = lazy(() => import("./pages/Plan/PlanPage").then((m) => ({ default: m.PlanPage })));
+const AdminPage = lazy(() => import("./pages/Admin/AdminPage").then((m) => ({ default: m.AdminPage })));
 // Página PÚBLICA do devedor (spec 0018 — M2): acordo/pagamento, sem login.
 const PayPage = lazy(() => import("./pages/Pay/PayPage").then((m) => ({ default: m.PayPage })));
 
@@ -38,6 +40,10 @@ export default function App() {
             <Route path="/subscriptions" element={<SubscriptionsPage />} />
             <Route path="/plano" element={<PlanPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            {/* Super-admin (spec 0023): só para e-mails da allowlist. */}
+            <Route element={<AdminRoute />}>
+              <Route path="/admin" element={<AdminPage />} />
+            </Route>
           </Route>
         </Route>
 
