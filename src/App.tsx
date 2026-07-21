@@ -14,6 +14,7 @@ const ClientsPage = lazy(() => import("./pages/Clients/ClientsPage").then((m) =>
 const InvoicesPage = lazy(() => import("./pages/Invoices/InvoicesPage").then((m) => ({ default: m.InvoicesPage })));
 const SubscriptionsPage = lazy(() => import("./pages/Subscriptions/SubscriptionsPage").then((m) => ({ default: m.SubscriptionsPage })));
 const SettingsPage = lazy(() => import("./pages/Settings/SettingsPage").then((m) => ({ default: m.SettingsPage })));
+const PlanPage = lazy(() => import("./pages/Plan/PlanPage").then((m) => ({ default: m.PlanPage })));
 // Página PÚBLICA do devedor (spec 0018 — M2): acordo/pagamento, sem login.
 const PayPage = lazy(() => import("./pages/Pay/PayPage").then((m) => ({ default: m.PayPage })));
 
@@ -35,6 +36,7 @@ export default function App() {
             <Route path="/clients" element={<ClientsPage />} />
             <Route path="/invoices" element={<InvoicesPage />} />
             <Route path="/subscriptions" element={<SubscriptionsPage />} />
+            <Route path="/plano" element={<PlanPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Route>
