@@ -1,9 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import settingsService from "../services/settings.service";
-import type { PaymentSettings, WhatsappSettingsInput } from "../services/settings.service";
+import type {
+  PaymentSettings,
+  WhatsappSettingsInput,
+  NegotiationSettings,
+} from "../services/settings.service";
 
 const PAYMENT_KEY = ["settings", "payment"];
 const WHATSAPP_KEY = ["settings", "whatsapp"];
+const NEGOTIATION_KEY = ["settings", "negotiation"];
 
 export function usePaymentSettings() {
   return useQuery({ queryKey: PAYMENT_KEY, queryFn: () => settingsService.getPayment() });
@@ -26,5 +31,17 @@ export function useUpdateWhatsappSettings() {
   return useMutation({
     mutationFn: (data: WhatsappSettingsInput) => settingsService.updateWhatsapp(data),
     onSuccess: () => qc.invalidateQueries({ queryKey: WHATSAPP_KEY }),
+  });
+}
+
+export function useNegotiationSettings() {
+  return useQuery({ queryKey: NEGOTIATION_KEY, queryFn: () => settingsService.getNegotiation() });
+}
+
+export function useUpdateNegotiationSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: NegotiationSettings) => settingsService.updateNegotiation(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: NEGOTIATION_KEY }),
   });
 }

@@ -26,6 +26,19 @@ export interface WhatsappSettingsInput {
   apiVersion?: string | null;
 }
 
+/** Regras de autonegociação por tenant (spec 0018 — M2, Botão de Alívio). */
+export interface NegotiationSettings {
+  enabled: boolean;
+  hesitationOpens: number;
+  discountEnabled: boolean;
+  discountPercent: number; // 0..1
+  installmentsEnabled: boolean;
+  maxInstallments: number;
+  deferEnabled: boolean;
+  deferMaxDays: number;
+  deferFeePercent: number; // 0..1
+}
+
 class SettingsService {
   async getPayment(): Promise<PaymentSettings> {
     const response = await api.get("/settings/payment");
@@ -44,6 +57,16 @@ class SettingsService {
 
   async updateWhatsapp(data: WhatsappSettingsInput): Promise<WhatsappSettings> {
     const response = await api.put("/settings/whatsapp", data);
+    return response.data;
+  }
+
+  async getNegotiation(): Promise<NegotiationSettings> {
+    const response = await api.get("/settings/negotiation");
+    return response.data;
+  }
+
+  async updateNegotiation(data: NegotiationSettings): Promise<NegotiationSettings> {
+    const response = await api.put("/settings/negotiation", data);
     return response.data;
   }
 }
