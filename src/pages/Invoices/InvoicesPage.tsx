@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Plus, Send, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle, Copy, Check, CheckCircle2, Trash2, Wallet } from "lucide-react";
 import { isAxiosError } from "axios";
 import { Modal } from "../../components/ui/Modal";
@@ -66,6 +67,8 @@ export const InvoicesPage: React.FC = () => {
   const invoices: Invoice[] = data?.invoices ?? [];
   const meta = data?.meta ?? { totalItems: 0, totalPages: 1, currentPage: 1, limit };
 
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<InvoiceInput>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
@@ -85,6 +88,17 @@ export const InvoicesPage: React.FC = () => {
     setFormError(null);
     setFormOpen(true);
   };
+
+  // Deep-link do onboarding (spec 0021): /invoices?new=1 abre o modal de criação
+  // e limpa o parâmetro para não reabrir ao recarregar.
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      openCreate();
+      searchParams.delete("new");
+      setSearchParams(searchParams, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const addItem = () => setForm((f) => ({ ...f, items: [...f.items, newItem()] }));
   const removeItem = (idx: number) =>
