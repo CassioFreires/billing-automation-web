@@ -1,9 +1,14 @@
 /**
- * Armazenamento do JWT. Centralizado para trocar de estratégia (localStorage,
+ * Armazenamento de tokens. Centralizado para trocar de estratégia (localStorage,
  * cookie httpOnly, etc.) num único lugar. Ver SDD/context/architecture.md.
+ *
+ * Duas SESSÕES independentes (spec 0031):
+ *  - tenant  → `adimplo.token`         (app do cliente)
+ *  - console → `adimplo.console_token` (super-admin da plataforma)
+ * Chaves distintas garantem que console e tenant não colidem (podem coexistir).
  */
 const TOKEN_KEY = "adimplo.token";
-const ADMIN_BACKUP_KEY = "adimplo.admin_token"; // token do admin durante impersonação
+const CONSOLE_TOKEN_KEY = "adimplo.console_token";
 const IMPERSONATING_KEY = "adimplo.impersonating"; // nome do tenant impersonado
 
 export const tokenStorage = {
@@ -18,23 +23,33 @@ export const tokenStorage = {
   },
 };
 
-/** Suporte à impersonação do super-admin (spec 0023). */
+/** Sessão do console da plataforma (super-admin), separada do tenant. */
+export const consoleTokenStorage = {
+  get(): string | null {
+    return localStorage.getItem(CONSOLE_TOKEN_KEY);
+  },
+  set(token: string): void {
+    localStorage.setItem(CONSOLE_TOKEN_KEY, token);
+  },
+  clear(): void {
+    localStorage.removeItem(CONSOLE_TOKEN_KEY);
+  },
+};
+
+/**
+ * Impersonação (spec 0031): o admin (logado no console) entra num tenant. Só
+ * ativa o token de tenant + uma flag; a sessão do console (console_token)
+ * permanece intacta, então "Sair" volta ao console sem novo login.
+ */
 export const impersonation = {
-  /** Guarda o token do admin e ativa o token de impersonação. */
-  start(impersonationToken: string, tenantName: string): void {
-    const admin = localStorage.getItem(TOKEN_KEY);
-    if (admin) localStorage.setItem(ADMIN_BACKUP_KEY, admin);
-    localStorage.setItem(TOKEN_KEY, impersonationToken);
+  start(tenantToken: string, tenantName: string): void {
+    localStorage.setItem(TOKEN_KEY, tenantToken);
     localStorage.setItem(IMPERSONATING_KEY, tenantName);
   },
-  /** Restaura o token do admin e sai da impersonação. */
   stop(): void {
-    const admin = localStorage.getItem(ADMIN_BACKUP_KEY);
-    if (admin) localStorage.setItem(TOKEN_KEY, admin);
-    localStorage.removeItem(ADMIN_BACKUP_KEY);
+    localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(IMPERSONATING_KEY);
   },
-  /** Nome do tenant impersonado, ou null se não está impersonando. */
   current(): string | null {
     return localStorage.getItem(IMPERSONATING_KEY);
   },

@@ -11,7 +11,7 @@ function ImpersonationBanner() {
   if (!name) return null;
   const exit = () => {
     impersonation.stop();
-    window.location.href = "/admin";
+    window.location.href = "/console";
   };
   return (
     <div className="flex items-center justify-center gap-2 text-sm bg-brand-primary/15 text-brand-primary border-b border-brand-primary/30 px-4 py-2">
