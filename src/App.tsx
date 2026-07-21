@@ -1,9 +1,11 @@
 import { Suspense, lazy } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
-import { AdminRoute } from "./auth/AdminRoute";
 import { AppShell } from "./components/Layouts/AppShell";
 import { RouteFallback } from "./components/RouteFallback";
+import { ConsoleAuthProvider } from "./auth/ConsoleAuthContext";
+import { ConsoleRoute } from "./auth/ConsoleRoute";
+import { ConsoleLayout } from "./pages/Console/ConsoleLayout";
 
 // Code splitting: cada página vira um chunk carregado sob demanda.
 // A landing pública não baixa o JS do painel, e vice-versa.
@@ -16,9 +18,11 @@ const InvoicesPage = lazy(() => import("./pages/Invoices/InvoicesPage").then((m)
 const SubscriptionsPage = lazy(() => import("./pages/Subscriptions/SubscriptionsPage").then((m) => ({ default: m.SubscriptionsPage })));
 const SettingsPage = lazy(() => import("./pages/Settings/SettingsPage").then((m) => ({ default: m.SettingsPage })));
 const PlanPage = lazy(() => import("./pages/Plan/PlanPage").then((m) => ({ default: m.PlanPage })));
-const AdminPage = lazy(() => import("./pages/Admin/AdminPage").then((m) => ({ default: m.AdminPage })));
 // Página PÚBLICA do devedor (spec 0018 — M2): acordo/pagamento, sem login.
 const PayPage = lazy(() => import("./pages/Pay/PayPage").then((m) => ({ default: m.PayPage })));
+// Console da PLATAFORMA (spec 0031): super-admin, isolado do app do cliente.
+const ConsoleLoginPage = lazy(() => import("./pages/Console/ConsoleLoginPage").then((m) => ({ default: m.ConsoleLoginPage })));
+const ConsoleDashboard = lazy(() => import("./pages/Admin/AdminPage").then((m) => ({ default: m.AdminPage })));
 
 export default function App() {
   return (
@@ -31,7 +35,17 @@ export default function App() {
         {/* Página do devedor: abre o link /r/:token → redireciona pra cá (spec 0018 — M2) */}
         <Route path="/pagar/:token" element={<PayPage />} />
 
-        {/* Protegidas (exigem JWT) dentro do layout autenticado */}
+        {/* Console da plataforma (spec 0031): sessão/identidade próprias, fora do app do cliente */}
+        <Route path="/console" element={<ConsoleAuthProvider><Outlet /></ConsoleAuthProvider>}>
+          <Route path="login" element={<ConsoleLoginPage />} />
+          <Route element={<ConsoleRoute />}>
+            <Route element={<ConsoleLayout />}>
+              <Route index element={<ConsoleDashboard />} />
+            </Route>
+          </Route>
+        </Route>
+
+        {/* App do cliente (exige JWT de tenant) dentro do layout autenticado */}
         <Route element={<ProtectedRoute />}>
           <Route element={<AppShell />}>
             <Route path="/dashboard" element={<DashboardPage />} />
@@ -40,10 +54,6 @@ export default function App() {
             <Route path="/subscriptions" element={<SubscriptionsPage />} />
             <Route path="/plano" element={<PlanPage />} />
             <Route path="/settings" element={<SettingsPage />} />
-            {/* Super-admin (spec 0023): só para e-mails da allowlist. */}
-            <Route element={<AdminRoute />}>
-              <Route path="/admin" element={<AdminPage />} />
-            </Route>
           </Route>
         </Route>
 

@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Users, Receipt, Repeat, Settings, Gem, Shield, Menu, X, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, Receipt, Repeat, Settings, Gem, Menu, X, LogOut } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
-import { useAdminMe } from "../../hooks/useAdmin";
 import { LogoWordmark } from "../Logo";
 
+// App do cliente (tenant). O console do super-admin é uma área SEPARADA (/console)
+// — não aparece aqui (spec 0031).
 const menuItems = [
   { to: "/dashboard", label: "Painel Geral", icon: LayoutDashboard },
   { to: "/clients", label: "Clientes", icon: Users },
@@ -17,9 +18,7 @@ const menuItems = [
 export const Sidebar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { logout } = useAuth();
-  // Item "Admin" só aparece para super-admin (backend reconhece via /admin/me).
-  const { isSuccess: isAdmin } = useAdminMe();
-  const items = isAdmin ? [...menuItems, { to: "/admin", label: "Admin", icon: Shield }] : menuItems;
+  const items = menuItems;
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `w-full flex items-center gap-4 px-4 py-3 rounded-xl font-medium text-sm transition-all ${
