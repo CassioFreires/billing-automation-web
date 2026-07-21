@@ -14,6 +14,8 @@ const ClientsPage = lazy(() => import("./pages/Clients/ClientsPage").then((m) =>
 const InvoicesPage = lazy(() => import("./pages/Invoices/InvoicesPage").then((m) => ({ default: m.InvoicesPage })));
 const SubscriptionsPage = lazy(() => import("./pages/Subscriptions/SubscriptionsPage").then((m) => ({ default: m.SubscriptionsPage })));
 const SettingsPage = lazy(() => import("./pages/Settings/SettingsPage").then((m) => ({ default: m.SettingsPage })));
+// Página PÚBLICA do devedor (spec 0018 — M2): acordo/pagamento, sem login.
+const PayPage = lazy(() => import("./pages/Pay/PayPage").then((m) => ({ default: m.PayPage })));
 
 export default function App() {
   return (
@@ -23,6 +25,8 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        {/* Página do devedor: abre o link /r/:token → redireciona pra cá (spec 0018 — M2) */}
+        <Route path="/pagar/:token" element={<PayPage />} />
 
         {/* Protegidas (exigem JWT) dentro do layout autenticado */}
         <Route element={<ProtectedRoute />}>
