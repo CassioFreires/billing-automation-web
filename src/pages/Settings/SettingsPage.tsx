@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from "react";
-import { Settings, CreditCard, MessageCircle, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Settings, CreditCard, MessageCircle, Loader2, AlertCircle, CheckCircle2, Sparkles } from "lucide-react";
 import { isAxiosError } from "axios";
 import {
   usePaymentSettings,
   useUpdatePaymentSettings,
   useWhatsappSettings,
   useUpdateWhatsappSettings,
+  useNegotiationSettings,
+  useUpdateNegotiationSettings,
 } from "../../hooks/useSettings";
 import type {
   PaymentProvider,
   PaymentSettings,
   WhatsappProvider,
+  NegotiationSettings,
 } from "../../services/settings.service";
 
 const PROVIDERS: { value: PaymentProvider; label: string; desc: string }[] = [
@@ -106,6 +109,63 @@ export const SettingsPage: React.FC = () => {
       setSaved(true);
     } catch (err) {
       setError(apiError(err, "Erro ao salvar as configurações."));
+    }
+  };
+
+  // --- Autonegociação (Botão de Alívio — spec 0018) ---
+  const { data: negData, isLoading: negLoading } = useNegotiationSettings();
+  const updateNegotiation = useUpdateNegotiationSettings();
+  // percentuais na UI como inteiros (10 = 10%); convertidos p/ 0..1 ao salvar.
+  const [nForm, setNForm] = useState({
+    enabled: false,
+    hesitationOpens: 3,
+    discountEnabled: false,
+    discountPercent: 10,
+    installmentsEnabled: false,
+    maxInstallments: 3,
+    deferEnabled: false,
+    deferMaxDays: 7,
+    deferFeePercent: 0,
+  });
+  const [nError, setNError] = useState<string | null>(null);
+  const [nSaved, setNSaved] = useState(false);
+
+  useEffect(() => {
+    if (negData) {
+      setNForm({
+        enabled: negData.enabled,
+        hesitationOpens: negData.hesitationOpens,
+        discountEnabled: negData.discountEnabled,
+        discountPercent: Math.round((negData.discountPercent ?? 0) * 100),
+        installmentsEnabled: negData.installmentsEnabled,
+        maxInstallments: negData.maxInstallments,
+        deferEnabled: negData.deferEnabled,
+        deferMaxDays: negData.deferMaxDays,
+        deferFeePercent: Math.round((negData.deferFeePercent ?? 0) * 100),
+      });
+    }
+  }, [negData]);
+
+  const submitNegotiation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNError(null);
+    setNSaved(false);
+    const payload: NegotiationSettings = {
+      enabled: nForm.enabled,
+      hesitationOpens: Number(nForm.hesitationOpens) || 3,
+      discountEnabled: nForm.discountEnabled,
+      discountPercent: (Number(nForm.discountPercent) || 0) / 100,
+      installmentsEnabled: nForm.installmentsEnabled,
+      maxInstallments: Number(nForm.maxInstallments) || 1,
+      deferEnabled: nForm.deferEnabled,
+      deferMaxDays: Number(nForm.deferMaxDays) || 0,
+      deferFeePercent: (Number(nForm.deferFeePercent) || 0) / 100,
+    };
+    try {
+      await updateNegotiation.mutateAsync(payload);
+      setNSaved(true);
+    } catch (err) {
+      setNError(apiError(err, "Erro ao salvar as regras de alívio."));
     }
   };
 
@@ -312,6 +372,174 @@ export const SettingsPage: React.FC = () => {
               className="focus-ring bg-brand-primary hover:bg-brand-hover text-white font-semibold rounded-xl py-2.5 px-6 text-sm flex items-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60"
             >
               {updateWhatsapp.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              Salvar
+            </button>
+          </form>
+        )}
+      </div>
+
+      {/* Autonegociação — Botão de Alívio de Caixa (spec 0018 — M2) */}
+      <div className="bg-bg-card border border-border-subtle/80 rounded-2xl p-6">
+        <div className="flex items-center gap-2 text-sm font-medium text-brand-primary mb-1">
+          <Sparkles className="h-4 w-4" />
+          Botão de Alívio de Caixa
+        </div>
+        <p className="text-xs text-text-muted mb-5">
+          Quando um cliente abre o link várias vezes e <strong>não paga</strong> (está "hesitando"), o Adimplo
+          oferece <strong>sozinho</strong> uma condição que você define aqui — desconto à vista, parcelamento ou
+          novo prazo. Zero negociação no zap.
+        </p>
+
+        {negLoading ? (
+          <div className="h-40 rounded-xl bg-bg-main/60 animate-pulse" />
+        ) : (
+          <form onSubmit={submitNegotiation} className="space-y-5">
+            {/* Master toggle */}
+            <label className="flex items-start gap-3 p-3 rounded-xl border border-border-subtle cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-1 accent-brand-primary h-4 w-4"
+                checked={nForm.enabled}
+                onChange={(e) => setNForm({ ...nForm, enabled: e.target.checked })}
+              />
+              <div>
+                <div className="text-sm font-medium">Ativar autonegociação</div>
+                <div className="text-xs text-text-muted">Com isto desligado, o link só mostra "Pagar" — sem ofertas.</div>
+              </div>
+            </label>
+
+            {nForm.enabled && (
+              <div className="space-y-5 pl-1 animate-fade-in">
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-medium text-text-muted uppercase tracking-wider">
+                    Disparar após quantas aberturas sem pagar
+                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    className={`${inputClass} max-w-[8rem]`}
+                    value={nForm.hesitationOpens}
+                    onChange={(e) => setNForm({ ...nForm, hesitationOpens: Number(e.target.value) })}
+                  />
+                </label>
+
+                {/* Desconto */}
+                <div className="rounded-xl border border-border-subtle p-3.5 space-y-3">
+                  <label className="flex items-center gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="accent-brand-primary h-4 w-4"
+                      checked={nForm.discountEnabled}
+                      onChange={(e) => setNForm({ ...nForm, discountEnabled: e.target.checked })}
+                    />
+                    <span className="text-sm font-medium">Desconto à vista</span>
+                  </label>
+                  {nForm.discountEnabled && (
+                    <label className="flex items-center gap-2 text-sm pl-7">
+                      <span className="text-text-muted text-xs">Desconto de</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={90}
+                        className={`${inputClass} max-w-[6rem]`}
+                        value={nForm.discountPercent}
+                        onChange={(e) => setNForm({ ...nForm, discountPercent: Number(e.target.value) })}
+                      />
+                      <span className="text-text-muted text-xs">% no pagamento imediato</span>
+                    </label>
+                  )}
+                </div>
+
+                {/* Parcelamento */}
+                <div className="rounded-xl border border-border-subtle p-3.5 space-y-3">
+                  <label className="flex items-center gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="accent-brand-primary h-4 w-4"
+                      checked={nForm.installmentsEnabled}
+                      onChange={(e) => setNForm({ ...nForm, installmentsEnabled: e.target.checked })}
+                    />
+                    <span className="text-sm font-medium">Parcelamento</span>
+                  </label>
+                  {nForm.installmentsEnabled && (
+                    <label className="flex items-center gap-2 text-sm pl-7">
+                      <span className="text-text-muted text-xs">Em até</span>
+                      <input
+                        type="number"
+                        min={2}
+                        max={24}
+                        className={`${inputClass} max-w-[6rem]`}
+                        value={nForm.maxInstallments}
+                        onChange={(e) => setNForm({ ...nForm, maxInstallments: Number(e.target.value) })}
+                      />
+                      <span className="text-text-muted text-xs">parcelas</span>
+                    </label>
+                  )}
+                </div>
+
+                {/* Adiar */}
+                <div className="rounded-xl border border-border-subtle p-3.5 space-y-3">
+                  <label className="flex items-center gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="accent-brand-primary h-4 w-4"
+                      checked={nForm.deferEnabled}
+                      onChange={(e) => setNForm({ ...nForm, deferEnabled: e.target.checked })}
+                    />
+                    <span className="text-sm font-medium">Adiar vencimento</span>
+                  </label>
+                  {nForm.deferEnabled && (
+                    <div className="space-y-2.5 pl-7">
+                      <label className="flex items-center gap-2 text-sm">
+                        <span className="text-text-muted text-xs">Adiar em até</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={90}
+                          className={`${inputClass} max-w-[6rem]`}
+                          value={nForm.deferMaxDays}
+                          onChange={(e) => setNForm({ ...nForm, deferMaxDays: Number(e.target.value) })}
+                        />
+                        <span className="text-text-muted text-xs">dias</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-sm">
+                        <span className="text-text-muted text-xs">com taxa de</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={90}
+                          className={`${inputClass} max-w-[6rem]`}
+                          value={nForm.deferFeePercent}
+                          onChange={(e) => setNForm({ ...nForm, deferFeePercent: Number(e.target.value) })}
+                        />
+                        <span className="text-text-muted text-xs">% (0 = sem taxa)</span>
+                      </label>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {nError && (
+              <div className="flex items-start gap-2 bg-brand-danger/10 border border-brand-danger/20 text-rose-300 text-sm rounded-xl px-3.5 py-2.5">
+                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>{nError}</span>
+              </div>
+            )}
+            {nSaved && (
+              <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-brand-success text-sm rounded-xl px-3.5 py-2.5">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                Regras de alívio salvas.
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={updateNegotiation.isPending}
+              className="focus-ring bg-brand-primary hover:bg-brand-hover text-white font-semibold rounded-xl py-2.5 px-6 text-sm flex items-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60"
+            >
+              {updateNegotiation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               Salvar
             </button>
           </form>
