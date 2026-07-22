@@ -140,6 +140,13 @@ export const PayPage: React.FC = () => {
           <ShieldCheck className="h-3.5 w-3.5" />
           Pagamento seguro via Adimplo
         </p>
+        <p className="mt-2 text-center text-[11px] text-text-faint">
+          Seus dados são tratados conforme a{" "}
+          <a href="/privacidade" target="_blank" rel="noreferrer" className="underline hover:text-text-muted">
+            Política de Privacidade
+          </a>
+          . Não guardamos seu IP.
+        </p>
       </div>
     </div>
   );

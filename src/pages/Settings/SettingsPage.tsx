@@ -15,6 +15,8 @@ import type {
   WhatsappProvider,
   NegotiationSettings,
 } from "../../services/settings.service";
+import { PrivacySettings } from "./PrivacySettings";
+import { ReguaSettings } from "./ReguaSettings";
 
 const PROVIDERS: { value: PaymentProvider; label: string; desc: string }[] = [
   { value: "infinitepay", label: "InfinitePay", desc: "Link de checkout (PIX + cartão). Só precisa do seu handle." },
@@ -639,6 +641,12 @@ export const SettingsPage: React.FC = () => {
           </form>
         )}
       </div>
+
+      {/* Régua de cobrança multi-passo (spec 0026) */}
+      <ReguaSettings />
+
+      {/* Privacidade e dados (LGPD, spec 0022) */}
+      <PrivacySettings />
     </div>
   );
 };

@@ -7,6 +7,7 @@ import {
   CalendarClock,
   MousePointerClick,
   Layers,
+  Sparkles,
 } from "lucide-react";
 import { useCockpit } from "../../hooks/useCockpit";
 import { formatBRL, formatDate } from "../../lib/format";
@@ -87,6 +88,29 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Valor recuperado — prova de ROI (spec 0025) */}
+      <div className="bg-gradient-to-r from-emerald-500/10 to-transparent border border-emerald-500/20 rounded-2xl p-6 flex items-center justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold text-brand-success uppercase tracking-wider flex items-center gap-1.5">
+            <Sparkles className="h-3.5 w-3.5" /> Valor recuperado ({days}d)
+          </p>
+          {isLoading && !data ? (
+            <div className="h-8 w-32 mt-2 rounded bg-bg-elevated animate-pulse" />
+          ) : (
+            <p className="text-3xl font-black mt-1 text-brand-success">
+              {k ? formatBRL(k.recuperadoNoPeriodo) : "—"}
+            </p>
+          )}
+          <p className="text-xs text-text-faint mt-1 max-w-md">
+            Pagamentos que entraram <strong>após o vencimento</strong> — inadimplência que o
+            Adimplo ajudou a virar caixa.
+          </p>
+        </div>
+        <div className="p-3 rounded-xl bg-brand-success/10 text-brand-success shrink-0">
+          <TrendingUp className="h-7 w-7" />
+        </div>
       </div>
 
       {/* Aging — envelhecimento da carteira */}

@@ -13,6 +13,7 @@ export const RegisterPage: React.FC = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,9 +26,14 @@ export const RegisterPage: React.FC = () => {
       return;
     }
 
+    if (!acceptedTerms) {
+      setError("É preciso aceitar os Termos e a Política de Privacidade.");
+      return;
+    }
+
     setLoading(true);
     try {
-      await register({ accountName, name, email, password });
+      await register({ accountName, name, email, password, acceptedTerms });
       navigate("/dashboard", { replace: true });
     } catch (err) {
       if (isAxiosError(err) && err.response?.status === 409) {
@@ -112,9 +118,29 @@ export const RegisterPage: React.FC = () => {
             </div>
           </label>
 
+          <label className="flex items-start gap-2.5 text-sm text-text-muted cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              className="focus-ring mt-0.5 h-4 w-4 rounded border-border-subtle bg-bg-main/60 accent-brand-primary"
+            />
+            <span>
+              Li e aceito os{" "}
+              <Link to="/termos" target="_blank" className="text-brand-primary hover:text-brand-hover font-medium">
+                Termos de Uso
+              </Link>{" "}
+              e a{" "}
+              <Link to="/privacidade" target="_blank" className="text-brand-primary hover:text-brand-hover font-medium">
+                Política de Privacidade
+              </Link>
+              .
+            </span>
+          </label>
+
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !acceptedTerms}
             className="focus-ring w-full bg-brand-primary hover:bg-brand-hover text-white font-semibold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-sky-500/10"
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}

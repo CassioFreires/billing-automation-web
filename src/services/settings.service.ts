@@ -71,6 +71,17 @@ export interface NegotiationSettings {
   deferFeePercent: number; // 0..1
 }
 
+/** Régua de cobrança multi-passo por tenant (spec 0026). */
+export interface ReguaStep {
+  offsetDays: number;
+  message?: string;
+}
+
+export interface ReguaSettings {
+  enabled: boolean;
+  steps: ReguaStep[];
+}
+
 class SettingsService {
   async getPayment(): Promise<PaymentSettings> {
     const response = await api.get("/settings/payment");
@@ -99,6 +110,16 @@ class SettingsService {
 
   async updateNegotiation(data: NegotiationSettings): Promise<NegotiationSettings> {
     const response = await api.put("/settings/negotiation", data);
+    return response.data;
+  }
+
+  async getRegua(): Promise<ReguaSettings> {
+    const response = await api.get("/settings/regua");
+    return response.data;
+  }
+
+  async updateRegua(data: ReguaSettings): Promise<ReguaSettings> {
+    const response = await api.put("/settings/regua", data);
     return response.data;
   }
 }

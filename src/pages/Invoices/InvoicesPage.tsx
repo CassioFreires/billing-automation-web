@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Plus, Send, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle, Copy, Check, CheckCircle2, Trash2, Wallet } from "lucide-react";
+import { Plus, Send, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle, Copy, Check, CheckCircle2, Trash2, Wallet, UploadCloud } from "lucide-react";
 import { isAxiosError } from "axios";
 import { Modal } from "../../components/ui/Modal";
+import { ImportInvoicesWizard } from "./ImportInvoicesWizard";
 import { useInvoices, useCreateInvoice, useTriggerNotification } from "../../hooks/useInvoices";
 import { usePayments, useRegisterPayment } from "../../hooks/usePayments";
 import { useClients } from "../../hooks/useClients";
@@ -70,6 +71,7 @@ export const InvoicesPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [formOpen, setFormOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [form, setForm] = useState<InvoiceInput>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
   const [detail, setDetail] = useState<Invoice | null>(null);
@@ -179,12 +181,20 @@ export const InvoicesPage: React.FC = () => {
           <h1 className="text-3xl font-extrabold tracking-tight">Faturas</h1>
           <p className="text-text-muted text-sm mt-1">Gere cobranças e acompanhe os pagamentos.</p>
         </div>
-        <button
-          onClick={openCreate}
-          className="focus-ring bg-brand-primary hover:bg-brand-hover text-white font-semibold px-4 py-2.5 rounded-xl text-sm flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-sky-500/10"
-        >
-          <Plus className="h-4 w-4" /> Nova cobrança
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setImportOpen(true)}
+            className="focus-ring border border-border-subtle hover:bg-bg-elevated text-text-main font-medium px-4 py-2.5 rounded-xl text-sm flex items-center gap-2 transition-all active:scale-95"
+          >
+            <UploadCloud className="h-4 w-4" /> Importar CSV
+          </button>
+          <button
+            onClick={openCreate}
+            className="focus-ring bg-brand-primary hover:bg-brand-hover text-white font-semibold px-4 py-2.5 rounded-xl text-sm flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-sky-500/10"
+          >
+            <Plus className="h-4 w-4" /> Nova cobrança
+          </button>
+        </div>
       </div>
 
       {/* Filtro por status */}
@@ -517,6 +527,9 @@ export const InvoicesPage: React.FC = () => {
           </form>
         )}
       </Modal>
+
+      {/* Importação de faturas por CSV (spec 0024) */}
+      <ImportInvoicesWizard open={importOpen} onClose={() => setImportOpen(false)} />
     </div>
   );
 };

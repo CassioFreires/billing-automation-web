@@ -292,6 +292,8 @@ const Footer: React.FC = () => (
       <LogoWordmark size={22} />
       <p>© {new Date().getFullYear()} Adimplo. Todos os direitos reservados.</p>
       <div className="flex items-center gap-5">
+        <Link to="/privacidade" className="hover:text-white transition-colors">Privacidade</Link>
+        <Link to="/termos" className="hover:text-white transition-colors">Termos</Link>
         <Link to="/login" className="hover:text-white transition-colors">Entrar</Link>
         <Link to="/register" className="hover:text-white transition-colors">Criar conta</Link>
       </div>
