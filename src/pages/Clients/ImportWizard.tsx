@@ -22,6 +22,7 @@ const TARGETS = [
   { key: "name", label: "Nome", required: true },
   { key: "phone", label: "Telefone", required: true },
   { key: "document", label: "Documento (CPF/CNPJ)", required: true },
+  { key: "email", label: "E-mail (opcional)", required: false },
   { key: "status", label: "Status (opcional)", required: false },
 ] as const;
 
@@ -43,6 +44,7 @@ function guessMapping(headers: string[]): Record<TargetKey, string> {
     name: find(["nome", "name", "cliente", "razao"]),
     phone: find(["telefone", "phone", "celular", "whatsapp", "fone", "tel"]),
     document: find(["documento", "document", "cpf", "cnpj", "doc"]),
+    email: find(["email", "e-mail", "mail"]),
     status: find(["status", "situacao"]),
   };
 }
@@ -76,14 +78,19 @@ function validateRow(
   const name = get("name");
   const phone = get("phone");
   const document = get("document");
+  const email = get("email");
   const status = normalizeStatus(get("status"));
 
   const errors: string[] = [];
   if (name.length < 3) errors.push("nome < 3 caracteres");
   if (phone.replace(/\D/g, "").length < 10) errors.push("telefone < 10 dígitos");
   if (document.length < 11) errors.push("documento < 11 caracteres");
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push("e-mail inválido");
 
-  return { row: { name, phone, document, ...(status ? { status } : {}) }, errors };
+  return {
+    row: { name, phone, document, ...(email ? { email } : {}), ...(status ? { status } : {}) },
+    errors,
+  };
 }
 
 function apiError(err: unknown, fallback: string): string {
@@ -108,6 +115,7 @@ export const ImportWizard: React.FC<Props> = ({ open, onClose }) => {
     name: NONE,
     phone: NONE,
     document: NONE,
+    email: NONE,
     status: NONE,
   });
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -320,6 +328,7 @@ export const ImportWizard: React.FC<Props> = ({ open, onClose }) => {
                         <td className="p-2.5">{v.row.name || <span className="text-text-faint">—</span>}</td>
                         <td className="p-2.5 font-mono">{v.row.phone || <span className="text-text-faint">—</span>}</td>
                         <td className="p-2.5 font-mono">{v.row.document || <span className="text-text-faint">—</span>}</td>
+                        <td className="p-2.5">{v.row.email || <span className="text-text-faint">—</span>}</td>
                         <td className="p-2.5">{v.row.status ?? <span className="text-text-faint">EM_DIA</span>}</td>
                       </tr>
                     );

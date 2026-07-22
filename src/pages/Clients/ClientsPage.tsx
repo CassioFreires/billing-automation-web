@@ -8,7 +8,7 @@ import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from ".
 import type { Client, ClientInput } from "../../services/clientes.service";
 import { ImportWizard } from "./ImportWizard";
 
-const EMPTY_FORM: ClientInput = { name: "", phone: "", document: "" };
+const EMPTY_FORM: ClientInput = { name: "", phone: "", document: "", email: "" };
 
 function apiError(err: unknown, fallback: string): string {
   if (isAxiosError(err) && err.response?.data?.error) return String(err.response.data.error);
@@ -52,7 +52,7 @@ export const ClientsPage: React.FC = () => {
 
   const openEdit = (c: Client) => {
     setEditing(c);
-    setForm({ name: c.name, phone: c.phone, document: c.document });
+    setForm({ name: c.name, phone: c.phone, document: c.document, email: c.email ?? "" });
     setFormError(null);
     setFormOpen(true);
   };
@@ -86,12 +86,17 @@ export const ClientsPage: React.FC = () => {
     if (form.name.trim().length < 3) return setFormError("Nome deve ter ao menos 3 caracteres.");
     if (form.phone.replace(/\D/g, "").length < 10) return setFormError("Telefone inválido (mín. 10 dígitos).");
     if (form.document.trim().length < 11) return setFormError("Documento inválido (mín. 11 caracteres).");
+    const email = (form.email ?? "").trim();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setFormError("E-mail inválido.");
+
+    // E-mail: string vazia → null (limpa); senão o endereço.
+    const payload: ClientInput = { ...form, email: email || null };
 
     try {
       if (editing) {
-        await updateClient.mutateAsync({ id: editing.id, data: form });
+        await updateClient.mutateAsync({ id: editing.id, data: payload });
       } else {
-        await createClient.mutateAsync(form);
+        await createClient.mutateAsync(payload);
       }
       setFormOpen(false);
     } catch (err) {
@@ -257,6 +262,19 @@ export const ClientsPage: React.FC = () => {
           <label className="block space-y-1.5">
             <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Documento (CPF/CNPJ)</span>
             <input className={inputClass} value={form.document} onChange={(e) => setForm({ ...form, document: e.target.value })} placeholder="12345678901" />
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-xs font-medium text-text-muted uppercase tracking-wider">
+              E-mail <span className="text-text-faint normal-case">(opcional)</span>
+            </span>
+            <input
+              type="email"
+              className={inputClass}
+              value={form.email ?? ""}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              placeholder="cliente@email.com"
+            />
+            <span className="text-xs text-text-faint">Usado quando o canal de envio inclui e-mail (Configurações).</span>
           </label>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setFormOpen(false)} className="focus-ring flex-1 border border-border-subtle hover:bg-bg-elevated rounded-xl py-2.5 text-sm font-medium transition-all">

@@ -5,12 +5,14 @@ import type {
   WhatsappSettingsInput,
   NegotiationSettings,
   ReguaSettings,
+  ChannelSettings,
 } from "../services/settings.service";
 
 const PAYMENT_KEY = ["settings", "payment"];
 const WHATSAPP_KEY = ["settings", "whatsapp"];
 const NEGOTIATION_KEY = ["settings", "negotiation"];
 const REGUA_KEY = ["settings", "regua"];
+const CHANNEL_KEY = ["settings", "channel"];
 
 export function usePaymentSettings() {
   return useQuery({ queryKey: PAYMENT_KEY, queryFn: () => settingsService.getPayment() });
@@ -57,5 +59,17 @@ export function useUpdateReguaSettings() {
   return useMutation({
     mutationFn: (data: ReguaSettings) => settingsService.updateRegua(data),
     onSuccess: () => qc.invalidateQueries({ queryKey: REGUA_KEY }),
+  });
+}
+
+export function useChannelSettings() {
+  return useQuery({ queryKey: CHANNEL_KEY, queryFn: () => settingsService.getChannel() });
+}
+
+export function useUpdateChannelSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: ChannelSettings) => settingsService.updateChannel(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: CHANNEL_KEY }),
   });
 }

@@ -5,6 +5,7 @@ export interface Client {
   name: string;
   phone: string;
   document: string;
+  email?: string | null; // canal de e-mail (spec 0032)
   status: string; // EM_DIA | EM_ATRASO
   debtValue?: number;
   createdAt?: string;
@@ -14,12 +15,14 @@ export interface ClientInput {
   name: string;
   phone: string;
   document: string;
+  email?: string | null; // opcional; null limpa o e-mail (spec 0032)
 }
 
 export interface ImportClientRow {
   name: string;
   phone: string;
   document: string;
+  email?: string;
   status?: "EM_DIA" | "EM_ATRASO";
 }
 

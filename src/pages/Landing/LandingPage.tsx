@@ -5,11 +5,12 @@ import {
   Zap,
   ShieldCheck,
   BarChart3,
-  Repeat,
   Check,
   ArrowRight,
   Users,
   CreditCard,
+  ListChecks,
+  LinkIcon,
 } from "lucide-react";
 import { LogoWordmark } from "../../components/Logo";
 
@@ -19,18 +20,18 @@ import { LogoWordmark } from "../../components/Logo";
  * ========================================================================== */
 
 const features = [
-  { icon: MessageSquare, title: "Cobrança por WhatsApp", desc: "Régua automática que lembra, cobra e confirma pagamentos direto no WhatsApp do cliente." },
-  { icon: Repeat, title: "Automação sem esforço", desc: "Defina uma vez e o sistema dispara sozinho, todo dia, para quem está em atraso." },
-  { icon: CreditCard, title: "PIX e pagamentos", desc: "Gere cobranças com PIX/checkout e concilie o pagamento automaticamente via webhook." },
-  { icon: BarChart3, title: "Painel em tempo real", desc: "Acompanhe inadimplência, disparos e recebimentos num dashboard claro e rápido." },
-  { icon: ShieldCheck, title: "Seguro e LGPD", desc: "Multi-tenant com isolamento total de dados e ferramentas de LGPD (exportar/anonimizar)." },
-  { icon: Zap, title: "Escalável de verdade", desc: "Fila de processamento que aguenta volume: de 10 a 10 mil cobranças sem travar." },
+  { icon: ListChecks, title: "Régua inteligente multi-passo", desc: "Sequência automática de lembretes antes e depois do vencimento — cada passo com sua mensagem, no dia certo." },
+  { icon: MessageSquare, title: "Cobrança por WhatsApp", desc: "A régua lembra, cobra e confirma pagamentos direto no WhatsApp do cliente, sem você mexer um dedo." },
+  { icon: CreditCard, title: "PIX + multi-gateway", desc: "Asaas, Mercado Pago, PagBank, Stripe e mais. Gere cobranças com PIX/checkout e concilie via webhook." },
+  { icon: LinkIcon, title: "Portal do pagador", desc: "Um link só onde o cliente vê tudo que deve, o histórico e paga na hora. Menos ida e volta pra você." },
+  { icon: BarChart3, title: "Painel com valor recuperado", desc: "Acompanhe inadimplência, disparos, recebimentos e quanto você recuperou no período em tempo real." },
+  { icon: Users, title: "Equipe com papéis", desc: "Convide seu time com permissões (dono, admin, membro). Isolamento total de dados e ferramentas de LGPD." },
 ];
 
 const steps = [
   { n: "01", title: "Cadastre seus clientes", desc: "Importe ou cadastre quem você precisa cobrar. Cada conta é isolada e sua." },
   { n: "02", title: "Gere as cobranças", desc: "Crie faturas com PIX/checkout. O sistema identifica quem está em atraso." },
-  { n: "03", title: "A automação dispara", desc: "Lembretes e cobranças saem no WhatsApp automaticamente, na hora certa." },
+  { n: "03", title: "A régua dispara sozinha", desc: "Lembretes e cobranças multi-passo saem no WhatsApp na hora certa, antes e depois do vencimento." },
   { n: "04", title: "Receba e concilie", desc: "O pagamento é confirmado sozinho e a fatura vira paga no painel." },
 ];
 
