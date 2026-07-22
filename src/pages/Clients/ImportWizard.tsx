@@ -145,7 +145,7 @@ export const ImportWizard: React.FC<Props> = ({ open, onClose }) => {
     setStep("upload");
     setRawText("");
     setParseError(null);
-    setMapping({ name: NONE, phone: NONE, document: NONE, status: NONE });
+    setMapping({ name: NONE, phone: NONE, document: NONE, email: NONE, status: NONE });
     setSubmitError(null);
     setResult(null);
   };
