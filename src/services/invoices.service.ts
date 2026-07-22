@@ -29,6 +29,20 @@ export interface InvoiceInput {
   items: InvoiceItem[]; // total = soma(quantity * unitPrice)
 }
 
+/** Uma linha do import de faturas por CSV (spec 0024). */
+export interface ImportInvoiceRow {
+  clientPhone: string;
+  value: number;
+  dueDate: string; // ISO (YYYY-MM-DD)
+  description?: string;
+}
+
+export interface InvoiceImportResult {
+  criados: number;
+  ignorados: number;
+  erros: { linha: number; clientPhone: string; motivo: string }[];
+}
+
 export interface InvoiceMeta {
   totalItems: number;
   totalPages: number;
@@ -54,6 +68,12 @@ export class InvoiceService {
 
   async create(data: InvoiceInput): Promise<Invoice> {
     const response = await api.post("/invoices", data);
+    return response.data;
+  }
+
+  /** Importa faturas em lote via CSV (spec 0024). */
+  async import(invoices: ImportInvoiceRow[]): Promise<InvoiceImportResult> {
+    const response = await api.post("/invoices/import", { invoices });
     return response.data;
   }
 }

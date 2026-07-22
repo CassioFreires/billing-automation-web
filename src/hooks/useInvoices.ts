@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import invoiceService from "../services/invoices.service";
-import type { InvoiceInput } from "../services/invoices.service";
+import type { InvoiceInput, ImportInvoiceRow } from "../services/invoices.service";
 import notificationService from "../services/notification.service";
 
 export interface InvoiceListParams {
@@ -24,6 +24,15 @@ export function useCreateInvoice() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: InvoiceInput) => invoiceService.create(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+  });
+}
+
+/** Importa faturas em lote via CSV (spec 0024). */
+export function useImportInvoices() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (rows: ImportInvoiceRow[]) => invoiceService.import(rows),
     onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
   });
 }

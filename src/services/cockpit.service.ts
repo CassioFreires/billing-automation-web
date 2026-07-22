@@ -9,6 +9,7 @@ export interface CockpitOverview {
     emAtraso: number;
     taxaInadimplencia: number; // 0..1
     recebidoNoPeriodo: number;
+    recuperadoNoPeriodo: number; // pagos após o vencimento (spec 0025)
   };
   porStatus: { PENDING: number; PAID: number; OVERDUE: number; FAILED: number };
   aging: { aVencer: number; d0a30: number; d31a60: number; d60mais: number };

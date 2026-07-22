@@ -11,6 +11,7 @@ export interface RegisterPayload {
   name: string;
   email: string;
   password: string;
+  acceptedTerms: boolean; // LGPD (spec 0022): aceite dos Termos/Política
 }
 
 export interface AuthResponse {

@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Users, Receipt, Repeat, Settings, Gem, Menu, X, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, Receipt, Repeat, Settings, Gem, Menu, X, LogOut, UsersRound } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
+import { useMe } from "../../hooks/useMe";
 import { LogoWordmark } from "../Logo";
 
 // App do cliente (tenant). O console do super-admin é uma área SEPARADA (/console)
@@ -15,10 +16,24 @@ const menuItems = [
   { to: "/settings", label: "Configurações", icon: Settings },
 ];
 
+const ROLE_LABEL: Record<string, string> = { OWNER: "Dono", ADMIN: "Administrador", MEMBER: "Membro" };
+
+function initials(name?: string): string {
+  if (!name) return "•";
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "•";
+}
+
 export const Sidebar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { logout } = useAuth();
-  const items = menuItems;
+  const { data: me } = useMe();
+
+  // "Equipe" só para quem gerencia (OWNER/ADMIN) — spec 0030.
+  const canManageTeam = me?.role === "OWNER" || me?.role === "ADMIN";
+  const items = canManageTeam
+    ? [...menuItems, { to: "/equipe", label: "Equipe", icon: UsersRound }]
+    : menuItems;
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `w-full flex items-center gap-4 px-4 py-3 rounded-xl font-medium text-sm transition-all ${
@@ -71,11 +86,11 @@ export const Sidebar: React.FC = () => {
         <div className="border-t border-border-subtle pt-4 space-y-3">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-brand-primary/20 flex items-center justify-center font-bold text-brand-primary border border-brand-primary/30">
-              CF
+              {initials(me?.name)}
             </div>
             <div className="overflow-hidden">
-              <p className="text-sm font-semibold truncate">Minha Conta</p>
-              <p className="text-xs text-text-muted truncate">admin</p>
+              <p className="text-sm font-semibold truncate">{me?.name ?? "Minha Conta"}</p>
+              <p className="text-xs text-text-muted truncate">{me?.role ? ROLE_LABEL[me.role] ?? me.role : "—"}</p>
             </div>
           </div>
           <button

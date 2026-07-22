@@ -1,8 +1,9 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Plus, Search, Pencil, Trash2, Users, Loader2, AlertCircle, UploadCloud } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Users, Loader2, AlertCircle, UploadCloud, Link as LinkIcon, Check } from "lucide-react";
 import { isAxiosError } from "axios";
 import { Modal } from "../../components/ui/Modal";
+import portalService from "../../services/portal.service";
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from "../../hooks/useClients";
 import type { Client, ClientInput } from "../../services/clientes.service";
 import { ImportWizard } from "./ImportWizard";
@@ -28,6 +29,7 @@ export const ClientsPage: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Client | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [portalCopiedId, setPortalCopiedId] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const filtered = useMemo(() => {
@@ -53,6 +55,18 @@ export const ClientsPage: React.FC = () => {
     setForm({ name: c.name, phone: c.phone, document: c.document });
     setFormError(null);
     setFormOpen(true);
+  };
+
+  /** Gera/recupera o link do Portal do pagador e copia para a área de transferência (spec 0027). */
+  const copyPortalLink = async (c: Client) => {
+    try {
+      const url = await portalService.getPortalLink(c.id);
+      await navigator.clipboard.writeText(url);
+      setPortalCopiedId(c.id);
+      setTimeout(() => setPortalCopiedId((id) => (id === c.id ? null : id)), 2000);
+    } catch {
+      /* silencioso: se falhar a cópia, o dono pode tentar de novo */
+    }
   };
 
   // Deep-link do onboarding (spec 0021): /clients?new=1 abre o modal de criação
@@ -190,6 +204,14 @@ export const ClientsPage: React.FC = () => {
                       </td>
                       <td className="p-4">
                         <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => copyPortalLink(c)}
+                            className="focus-ring p-2 rounded-lg text-text-muted hover:text-brand-primary hover:bg-sky-500/10 transition-all"
+                            aria-label="Copiar link do portal"
+                            title="Copiar link do portal do pagador"
+                          >
+                            {portalCopiedId === c.id ? <Check className="h-4 w-4 text-brand-success" /> : <LinkIcon className="h-4 w-4" />}
+                          </button>
                           <button
                             onClick={() => openEdit(c)}
                             className="focus-ring p-2 rounded-lg text-text-muted hover:text-white hover:bg-bg-elevated transition-all"
