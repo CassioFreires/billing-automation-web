@@ -82,6 +82,13 @@ export interface ReguaSettings {
   steps: ReguaStep[];
 }
 
+/** Canal de envio das cobranças por tenant (spec 0032). */
+export type NotifyChannel = "whatsapp" | "email" | "both";
+
+export interface ChannelSettings {
+  channel: NotifyChannel;
+}
+
 class SettingsService {
   async getPayment(): Promise<PaymentSettings> {
     const response = await api.get("/settings/payment");
@@ -120,6 +127,16 @@ class SettingsService {
 
   async updateRegua(data: ReguaSettings): Promise<ReguaSettings> {
     const response = await api.put("/settings/regua", data);
+    return response.data;
+  }
+
+  async getChannel(): Promise<ChannelSettings> {
+    const response = await api.get("/settings/channel");
+    return response.data;
+  }
+
+  async updateChannel(data: ChannelSettings): Promise<ChannelSettings> {
+    const response = await api.put("/settings/channel", data);
     return response.data;
   }
 }

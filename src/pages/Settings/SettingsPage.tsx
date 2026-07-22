@@ -17,6 +17,7 @@ import type {
 } from "../../services/settings.service";
 import { PrivacySettings } from "./PrivacySettings";
 import { ReguaSettings } from "./ReguaSettings";
+import { ChannelSettings } from "./ChannelSettings";
 
 const PROVIDERS: { value: PaymentProvider; label: string; desc: string }[] = [
   { value: "infinitepay", label: "InfinitePay", desc: "Link de checkout (PIX + cartão). Só precisa do seu handle." },
@@ -641,6 +642,9 @@ export const SettingsPage: React.FC = () => {
           </form>
         )}
       </div>
+
+      {/* Canal de envio das cobranças (spec 0032) */}
+      <ChannelSettings />
 
       {/* Régua de cobrança multi-passo (spec 0026) */}
       <ReguaSettings />
