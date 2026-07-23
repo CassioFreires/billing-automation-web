@@ -10,7 +10,8 @@ export interface InvoiceItem {
 export interface Invoice {
   id: string;
   value: number;
-  status: string; // PENDING | PAID | OVERDUE | FAILED
+  status: string; // PENDING | PAID | OVERDUE | FAILED (campo cru/persistido)
+  statusEfetivo?: string; // "vencida" derivada da data (spec 0034) — usar na UI
   dueDate: string;
   paidAt?: string | null;
   pixCopyPaste?: string | null;

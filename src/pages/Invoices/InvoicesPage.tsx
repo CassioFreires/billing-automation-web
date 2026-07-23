@@ -242,9 +242,11 @@ export const InvoicesPage: React.FC = () => {
                       <td className="p-4 font-medium">{inv.client?.name ?? "—"}</td>
                       <td className="p-4 font-mono font-semibold">{formatBRL(inv.value)}</td>
                       <td className="p-4">
-                        <span className={`text-xs px-2.5 py-0.5 rounded-full border ${statusBadge[inv.status] ?? statusBadge.FAILED}`}>
-                          {statusLabel[inv.status] ?? inv.status}
-                        </span>
+                        {(() => { const st = inv.statusEfetivo ?? inv.status; return (
+                          <span className={`text-xs px-2.5 py-0.5 rounded-full border ${statusBadge[st] ?? statusBadge.FAILED}`}>
+                            {statusLabel[st] ?? st}
+                          </span>
+                        ); })()}
                       </td>
                       <td className="p-4 text-text-muted text-xs">{formatDate(inv.dueDate)}</td>
                       <td className="p-4">
@@ -374,9 +376,11 @@ export const InvoicesPage: React.FC = () => {
               <span className="text-text-muted text-sm">{detail.client?.name}</span>
               <div className="flex items-center gap-3">
                 <span className="font-mono font-semibold">{formatBRL(detail.value)}</span>
-                <span className={`text-xs px-2.5 py-0.5 rounded-full border ${statusBadge[detail.status] ?? statusBadge.FAILED}`}>
-                  {statusLabel[detail.status] ?? detail.status}
-                </span>
+                {(() => { const st = detail.statusEfetivo ?? detail.status; return (
+                  <span className={`text-xs px-2.5 py-0.5 rounded-full border ${statusBadge[st] ?? statusBadge.FAILED}`}>
+                    {statusLabel[st] ?? st}
+                  </span>
+                ); })()}
               </div>
             </div>
 
