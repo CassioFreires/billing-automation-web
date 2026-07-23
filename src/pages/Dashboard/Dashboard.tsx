@@ -8,8 +8,11 @@ import {
   MousePointerClick,
   Layers,
   Sparkles,
+  LifeBuoy,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useCockpit } from "../../hooks/useCockpit";
+import { useRecoveryCases } from "../../hooks/useRecovery";
 import { formatBRL, formatDate } from "../../lib/format";
 import { OnboardingChecklist } from "../../components/Onboarding/OnboardingChecklist";
 
@@ -26,6 +29,12 @@ const AGING = [
 export const DashboardPage: React.FC = () => {
   const [days, setDays] = useState<number>(30);
   const { data, isLoading, error } = useCockpit(days);
+  const { data: recoveryCases } = useRecoveryCases();
+
+  const recoveryActive = (recoveryCases ?? []).filter(
+    (c) => c.status === "open" || c.status === "recovering"
+  );
+  const recoveryAtRisk = recoveryActive.reduce((sum, c) => sum + c.amountAtRisk, 0);
 
   if (error) {
     return (
@@ -112,6 +121,35 @@ export const DashboardPage: React.FC = () => {
           <TrendingUp className="h-7 w-7" />
         </div>
       </div>
+
+      {/* Em recuperação (spec 0033, F1) — atalho para os casos ativos */}
+      {recoveryActive.length > 0 && (
+        <Link
+          to="/recuperacoes"
+          className="block bg-bg-card border border-border-subtle/60 rounded-2xl p-6 hover:border-brand-primary/40 transition"
+        >
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold text-text-muted uppercase tracking-wider flex items-center gap-1.5">
+                <LifeBuoy className="h-3.5 w-3.5 text-brand-primary" /> Em recuperação
+              </p>
+              <p className="text-2xl font-black mt-1">
+                {recoveryActive.length}
+                <span className="text-sm font-semibold text-text-muted">
+                  {" "}
+                  {recoveryActive.length === 1 ? "caso" : "casos"} · {formatBRL(recoveryAtRisk)} em risco
+                </span>
+              </p>
+              <p className="text-xs text-text-faint mt-1">
+                Cobranças vencidas que o Adimplo está perseguindo. Ver todas →
+              </p>
+            </div>
+            <div className="p-3 rounded-xl bg-brand-primary/10 text-brand-primary shrink-0">
+              <LifeBuoy className="h-7 w-7" />
+            </div>
+          </div>
+        </Link>
+      )}
 
       {/* Aging — envelhecimento da carteira */}
       <div className="bg-bg-card border border-border-subtle/60 rounded-2xl p-6">

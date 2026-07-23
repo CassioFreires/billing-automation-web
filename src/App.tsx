@@ -17,6 +17,7 @@ const DashboardPage = lazy(() => import("./pages/Dashboard/Dashboard").then((m) 
 const ClientsPage = lazy(() => import("./pages/Clients/ClientsPage").then((m) => ({ default: m.ClientsPage })));
 const InvoicesPage = lazy(() => import("./pages/Invoices/InvoicesPage").then((m) => ({ default: m.InvoicesPage })));
 const SubscriptionsPage = lazy(() => import("./pages/Subscriptions/SubscriptionsPage").then((m) => ({ default: m.SubscriptionsPage })));
+const RecoveryPage = lazy(() => import("./pages/Recovery/RecoveryPage").then((m) => ({ default: m.RecoveryPage })));
 const SettingsPage = lazy(() => import("./pages/Settings/SettingsPage").then((m) => ({ default: m.SettingsPage })));
 const TeamPage = lazy(() => import("./pages/Team/TeamPage").then((m) => ({ default: m.TeamPage })));
 const PlanPage = lazy(() => import("./pages/Plan/PlanPage").then((m) => ({ default: m.PlanPage })));
@@ -64,6 +65,7 @@ export default function App() {
             <Route path="/clients" element={<ClientsPage />} />
             <Route path="/invoices" element={<InvoicesPage />} />
             <Route path="/subscriptions" element={<SubscriptionsPage />} />
+            <Route path="/recuperacoes" element={<RecoveryPage />} />
             <Route path="/plano" element={<PlanPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/equipe" element={<TeamPage />} />
