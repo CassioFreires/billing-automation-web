@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Users, Receipt, Repeat, Settings, Gem, Menu, X, LogOut, UsersRound } from "lucide-react";
+import { LayoutDashboard, Users, Receipt, Repeat, Settings, Gem, Menu, X, LogOut, UsersRound, LifeBuoy } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
 import { useMe } from "../../hooks/useMe";
 import { LogoWordmark } from "../Logo";
@@ -12,6 +12,7 @@ const menuItems = [
   { to: "/clients", label: "Clientes", icon: Users },
   { to: "/invoices", label: "Faturas", icon: Receipt },
   { to: "/subscriptions", label: "Assinaturas", icon: Repeat },
+  { to: "/recuperacoes", label: "Recuperações", icon: LifeBuoy },
   { to: "/plano", label: "Plano", icon: Gem },
   { to: "/settings", label: "Configurações", icon: Settings },
 ];
