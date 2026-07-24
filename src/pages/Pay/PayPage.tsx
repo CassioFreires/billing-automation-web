@@ -13,6 +13,8 @@ import {
   CalendarClock,
   CreditCard,
   BadgePercent,
+  ShoppingBag,
+  Plus,
 } from "lucide-react";
 import agreementsService from "../../services/agreements.service";
 import type {
@@ -21,6 +23,8 @@ import type {
   AgreementNewInvoice,
   AcceptAgreementResponse,
 } from "../../services/agreements.service";
+import offersService from "../../services/offers.service";
+import type { PublicOffer, OfferAddonInvoice } from "../../services/offers.service";
 import { Logo } from "../../components/Logo";
 import { formatBRL, formatDate } from "../../lib/format";
 
@@ -104,6 +108,32 @@ export const PayPage: React.FC = () => {
   const payAttemptMut = useMutation({
     mutationFn: () => agreementsService.payAttempt(token),
   });
+
+  // Loja no Pagamento (spec 0044, F15): vitrine de ofertas + aceite (gera add-on).
+  const [addon, setAddon] = useState<OfferAddonInvoice | null>(null);
+  const [addonPix, setAddonPix] = useState<string | null>(null);
+  const { data: offers } = useQuery({
+    queryKey: ["pay-offers", token],
+    queryFn: () => offersService.listForToken(token),
+    enabled: Boolean(token) && data?.invoice.status !== "PAID",
+    retry: false,
+  });
+  const acceptOfferMut = useMutation({
+    mutationFn: (offerId: string) => offersService.accept(token, offerId),
+    onSuccess: (res) => {
+      setAddon(res.newInvoice);
+      setAddonPix(null);
+    },
+  });
+  // Vai para o destino de pagamento do add-on (checkout ou PIX).
+  const payAddon = () => {
+    if (!addon) return;
+    if (addon.checkoutUrl) {
+      window.location.href = addon.checkoutUrl;
+      return;
+    }
+    if (addon.pixCopyPaste) setAddonPix(addon.pixCopyPaste);
+  };
 
   // Vai para o destino de pagamento: checkout hospedado (redireciona) ou PIX (mostra).
   const goPay = (target: { checkoutUrl: string | null; pixCopyPaste: string | null }) => {
@@ -287,6 +317,77 @@ export const PayPage: React.FC = () => {
           )}
           <p className="text-[11px] text-text-faint text-center">Condições oferecidas por quem emitiu a cobrança.</p>
         </div>
+      )}
+
+      {/* Loja no Pagamento — vitrine de ofertas (spec 0044, F15). */}
+      {addon ? (
+        <div className={`${card} space-y-4 animate-fade-in-up`}>
+          <div className="flex items-center gap-2 text-brand-success text-sm font-medium">
+            <CheckCircle2 className="h-4 w-4" />
+            Extra adicionado!
+          </div>
+          <div>
+            <div className="text-xs text-text-muted uppercase tracking-wider">Valor do extra</div>
+            <div className="text-2xl font-extrabold tracking-tight mt-1">{formatBRL(addon.value)}</div>
+            <p className="text-xs text-text-muted mt-1">É uma cobrança separada da sua mensalidade.</p>
+          </div>
+          {addonPix ? (
+            <PixBox code={addonPix} />
+          ) : (
+            <button
+              onClick={payAddon}
+              className="focus-ring w-full bg-brand-primary hover:bg-brand-hover text-white font-semibold rounded-xl py-3 text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+            >
+              <CreditCard className="h-4 w-4" />
+              Pagar o extra agora
+            </button>
+          )}
+        </div>
+      ) : (
+        offers && offers.length > 0 && (
+          <div className={`${card} space-y-4 animate-fade-in-up`}>
+            <div className="flex items-start gap-2.5">
+              <div className="p-2 bg-brand-primary/10 rounded-xl text-brand-primary border border-brand-primary/20">
+                <ShoppingBag className="h-4 w-4" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold">Que tal levar junto?</h2>
+                <p className="text-xs text-text-muted mt-0.5">Adicione um extra em 1 toque — cobrança à parte.</p>
+              </div>
+            </div>
+
+            <div className="space-y-2.5">
+              {offers.map((o: PublicOffer) => {
+                const isThis = acceptOfferMut.isPending && acceptOfferMut.variables === o.id;
+                return (
+                  <button
+                    key={o.id}
+                    onClick={() => acceptOfferMut.mutate(o.id)}
+                    disabled={acceptOfferMut.isPending}
+                    className="focus-ring w-full text-left border border-border-subtle hover:border-brand-primary/60 hover:bg-bg-elevated/40 rounded-xl p-3.5 flex items-center gap-3 transition-all active:scale-[0.99] disabled:opacity-60"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold truncate">{o.name}</div>
+                      <div className="text-xs text-text-muted">Adicionar ao pagamento</div>
+                    </div>
+                    <div className="text-right shrink-0 flex items-center gap-2">
+                      <span className="text-sm font-bold">{formatBRL(o.priceCents / 100)}</span>
+                      {isThis ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-brand-primary" />
+                      ) : (
+                        <Plus className="h-4 w-4 text-brand-primary" />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {acceptOfferMut.isError && (
+              <p className="text-xs text-brand-danger">{apiError(acceptOfferMut.error, "Não foi possível adicionar o extra.")}</p>
+            )}
+          </div>
+        )
       )}
     </div>
   );
