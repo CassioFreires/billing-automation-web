@@ -19,10 +19,36 @@ export interface CockpitOverview {
   };
 }
 
+/** Item da Lista do Dia (GET /api/cockpit/actions — backend spec 0036/F3). */
+export interface ActionItem {
+  invoiceId: string;
+  clientName: string;
+  value: number;
+  dueDate: string;
+  kind: "recuperar" | "cobrar" | "a_vencer";
+  band: string | null;
+  diasAtraso: number;
+  motivo: string;
+  priority: number;
+}
+
+export interface DailyActions {
+  geradoEm: string;
+  total: number;
+  mostrando: number;
+  itens: ActionItem[];
+}
+
 export class CockpitService {
   /** Painel do dono: KPIs, aging e fila de ações. `days` = janela de recebidos. */
   async getOverview(days = 30): Promise<CockpitOverview> {
     const response = await api.get("/cockpit/overview", { params: { days } });
+    return response.data;
+  }
+
+  /** Lista do Dia: fila de ação priorizada por dinheiro em risco (F3). */
+  async getActions(): Promise<DailyActions> {
+    const response = await api.get("/cockpit/actions");
     return response.data;
   }
 }

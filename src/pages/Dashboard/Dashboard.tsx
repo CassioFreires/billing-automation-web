@@ -9,12 +9,24 @@ import {
   Layers,
   Sparkles,
   LifeBuoy,
+  ListChecks,
+  Send,
+  Check,
+  Loader2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useCockpit } from "../../hooks/useCockpit";
+import { useCockpit, useDailyActions, useTriggerCharge } from "../../hooks/useCockpit";
 import { useRecoveryCases } from "../../hooks/useRecovery";
+import type { ActionItem as DailyAction } from "../../services/cockpit.service";
 import { formatBRL, formatDate } from "../../lib/format";
 import { OnboardingChecklist } from "../../components/Onboarding/OnboardingChecklist";
+
+/** Estilo do selo por tipo de ação da Lista do Dia (F3). */
+const KIND_BADGE: Record<string, { label: string; cls: string }> = {
+  recuperar: { label: "Recuperar", cls: "text-rose-400 bg-rose-500/10 border-rose-500/20" },
+  cobrar: { label: "Cobrar", cls: "text-brand-warning bg-amber-500/10 border-amber-500/20" },
+  a_vencer: { label: "A vencer", cls: "text-brand-primary bg-brand-primary/10 border-brand-primary/20" },
+};
 
 const PERIODS = [7, 30, 90] as const;
 
@@ -30,6 +42,7 @@ export const DashboardPage: React.FC = () => {
   const [days, setDays] = useState<number>(30);
   const { data, isLoading, error } = useCockpit(days);
   const { data: recoveryCases } = useRecoveryCases();
+  const { data: actions, isLoading: actionsLoading } = useDailyActions();
 
   const recoveryActive = (recoveryCases ?? []).filter(
     (c) => c.status === "open" || c.status === "recovering"
@@ -97,6 +110,24 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Lista do Dia (spec 0036, F3) — o que fazer hoje, por dinheiro em risco */}
+      <div className="bg-bg-card border border-border-subtle/60 rounded-2xl p-6">
+        <div className="flex items-center justify-between gap-3 mb-1">
+          <h3 className="font-bold text-lg flex items-center gap-2">
+            <ListChecks className="h-4 w-4 text-brand-primary" /> Lista do Dia
+          </h3>
+          {actions && actions.total > actions.mostrando && (
+            <span className="text-xs text-text-faint">
+              mostrando {actions.mostrando} de {actions.total}
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-text-faint mb-4">
+          Comece por aqui — ordenado pelo que <strong>mais dói no bolso</strong> (valor × risco × atraso).
+        </p>
+        <DailyActionsList loading={actionsLoading && !actions} items={actions?.itens ?? []} />
       </div>
 
       {/* Valor recuperado — prova de ROI (spec 0025) */}
@@ -224,6 +255,71 @@ export const DashboardPage: React.FC = () => {
           />
         </div>
       </div>
+    </div>
+  );
+};
+
+/** Lista do Dia (F3): itens priorizados com "Cobrar agora" por linha. */
+const DailyActionsList: React.FC<{ loading: boolean; items: DailyAction[] }> = ({ loading, items }) => {
+  const trigger = useTriggerCharge();
+  const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
+
+  const cobrar = async (invoiceId: string) => {
+    try {
+      await trigger.mutateAsync(invoiceId);
+      setDoneIds((s) => new Set(s).add(invoiceId));
+    } catch {
+      /* silencioso: o dono pode tentar de novo */
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-2.5">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-14 rounded-xl bg-bg-main/60 animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+  if (items.length === 0) {
+    return <p className="text-sm text-text-muted py-6 text-center">Nada pendente hoje. 🎉</p>;
+  }
+  return (
+    <div className="space-y-2.5">
+      {items.map((it) => {
+        const badge = KIND_BADGE[it.kind] ?? KIND_BADGE.cobrar;
+        const done = doneIds.has(it.invoiceId);
+        const pending = trigger.isPending && trigger.variables === it.invoiceId;
+        return (
+          <div key={it.invoiceId} className="flex items-center justify-between gap-3 rounded-xl bg-bg-main/50 border border-border-subtle/60 px-4 py-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${badge.cls}`}>{badge.label}</span>
+                <p className="text-sm font-medium truncate">{it.clientName}</p>
+              </div>
+              <p className="text-xs text-text-faint mt-0.5">{it.motivo}</p>
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="text-sm font-semibold font-mono">{formatBRL(it.value)}</span>
+              <button
+                onClick={() => cobrar(it.invoiceId)}
+                disabled={pending || done}
+                className="focus-ring inline-flex items-center gap-1.5 rounded-lg border border-border-subtle hover:bg-bg-elevated px-3 py-1.5 text-xs font-semibold transition-all disabled:opacity-60"
+                title="Enfileirar a cobrança dessa fatura agora"
+              >
+                {done ? (
+                  <><Check className="h-3.5 w-3.5 text-brand-success" /> Enviado</>
+                ) : pending ? (
+                  <><Loader2 className="h-3.5 w-3.5 animate-spin" /> …</>
+                ) : (
+                  <><Send className="h-3.5 w-3.5" /> Cobrar agora</>
+                )}
+              </button>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 };
