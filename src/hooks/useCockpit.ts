@@ -20,6 +20,15 @@ export function useDailyActions() {
   });
 }
 
+/** Previsão de caixa (GET /cockpit/forecast) — projeção por semana (F4). */
+export function useForecast(days = 30) {
+  return useQuery({
+    queryKey: ["cockpit", "forecast", days],
+    queryFn: () => cockpitService.getForecast(days),
+    placeholderData: (previous) => previous,
+  });
+}
+
 /** Ação "Cobrar agora": enfileira a cobrança da fatura e revalida a fila. */
 export function useTriggerCharge() {
   const qc = useQueryClient();
