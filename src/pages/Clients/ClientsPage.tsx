@@ -10,6 +10,20 @@ import { ImportWizard } from "./ImportWizard";
 
 const EMPTY_FORM: ClientInput = { name: "", phone: "", document: "", email: "" };
 
+// Radar de Risco (spec 0035): faixas de saúde do cliente.
+const HEALTH_FILTERS = [
+  { label: "Todos", value: "" },
+  { label: "Em risco", value: "at_risk" },
+  { label: "Atenção", value: "watch" },
+  { label: "Saudável", value: "healthy" },
+];
+const healthBadge: Record<string, string> = {
+  healthy: "text-brand-success bg-emerald-500/10 border-emerald-500/20",
+  watch: "text-brand-warning bg-amber-500/10 border-amber-500/20",
+  at_risk: "text-rose-400 bg-rose-500/10 border-rose-500/20",
+};
+const healthLabel: Record<string, string> = { healthy: "Saudável", watch: "Atenção", at_risk: "Em risco" };
+
 function apiError(err: unknown, fallback: string): string {
   if (isAxiosError(err) && err.response?.data?.error) return String(err.response.data.error);
   if (isAxiosError(err) && !err.response) return "Sem conexão com o servidor.";
@@ -23,6 +37,7 @@ export const ClientsPage: React.FC = () => {
   const deleteClient = useDeleteClient();
 
   const [search, setSearch] = useState("");
+  const [band, setBand] = useState(""); // filtro por faixa de saúde (Radar, spec 0035)
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Client | null>(null);
   const [form, setForm] = useState<ClientInput>(EMPTY_FORM);
@@ -34,14 +49,16 @@ export const ClientsPage: React.FC = () => {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return clients;
-    return clients.filter(
-      (c) =>
+    return clients.filter((c) => {
+      const matchesSearch =
+        !q ||
         c.name.toLowerCase().includes(q) ||
         c.phone.includes(q) ||
-        c.document.includes(q)
-    );
-  }, [clients, search]);
+        c.document.includes(q);
+      const matchesBand = !band || c.health?.band === band;
+      return matchesSearch && matchesBand;
+    });
+  }, [clients, search, band]);
 
   const openCreate = () => {
     setEditing(null);
@@ -154,6 +171,24 @@ export const ClientsPage: React.FC = () => {
         />
       </div>
 
+      {/* Filtro por saúde (Radar de Risco, spec 0035) */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className="text-xs text-text-faint uppercase tracking-wider">Radar de risco</span>
+        <div className="inline-flex bg-bg-card/50 border border-border-subtle/80 rounded-xl p-1">
+          {HEALTH_FILTERS.map((f) => (
+            <button
+              key={f.value}
+              onClick={() => setBand(f.value)}
+              className={`focus-ring px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                band === f.value ? "bg-brand-primary text-white" : "text-text-muted hover:text-white"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Conteúdo */}
       {error ? (
         <div className="text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-2xl p-6">
@@ -169,6 +204,7 @@ export const ClientsPage: React.FC = () => {
                   <th className="p-4">Telefone</th>
                   <th className="p-4">Documento</th>
                   <th className="p-4">Status</th>
+                  <th className="p-4">Saúde</th>
                   <th className="p-4 text-center">Ações</th>
                 </tr>
               </thead>
@@ -176,14 +212,14 @@ export const ClientsPage: React.FC = () => {
                 {isLoading ? (
                   Array.from({ length: 4 }).map((_, i) => (
                     <tr key={i}>
-                      <td colSpan={5} className="p-3">
+                      <td colSpan={6} className="p-3">
                         <div className="h-8 rounded-lg bg-bg-main/60 animate-pulse" />
                       </td>
                     </tr>
                   ))
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="text-center p-10 text-text-muted">
+                    <td colSpan={6} className="text-center p-10 text-text-muted">
                       {search ? "Nenhum cliente encontrado." : "Nenhum cliente cadastrado ainda."}
                     </td>
                   </tr>
@@ -205,6 +241,18 @@ export const ClientsPage: React.FC = () => {
                           <span className="text-brand-warning bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full text-xs font-medium">Em atraso</span>
                         ) : (
                           <span className="text-brand-success bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full text-xs font-medium">Em dia</span>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        {c.health ? (
+                          <span
+                            className={`text-xs px-2.5 py-0.5 rounded-full border font-medium ${healthBadge[c.health.band] ?? healthBadge.watch}`}
+                            title={`Score ${c.health.score}/100`}
+                          >
+                            {healthLabel[c.health.band] ?? c.health.band} · {c.health.score}
+                          </span>
+                        ) : (
+                          <span className="text-text-faint text-xs">—</span>
                         )}
                       </td>
                       <td className="p-4">
