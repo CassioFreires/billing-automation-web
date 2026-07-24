@@ -84,6 +84,8 @@ export const SubscriptionsPage: React.FC = () => {
   const [toCancel, setToCancel] = useState<Subscription | null>(null);
   const [reason, setReason] = useState<CancellationReason>("preco");
   const [offer, setOffer] = useState<OpenCancellationResult | null>(null);
+  const [discountPct, setDiscountPct] = useState(30);
+  const [discountMo, setDiscountMo] = useState(2);
   const openCancellation = useOpenCancellation();
   const resolveCancellation = useResolveCancellation();
 
@@ -102,6 +104,8 @@ export const SubscriptionsPage: React.FC = () => {
     if (!toCancel) return;
     try {
       const result = await openCancellation.mutateAsync({ subscriptionId: toCancel.id, reason });
+      setDiscountPct(result.suggestedPercent);
+      setDiscountMo(result.suggestedMonths);
       setOffer(result);
     } catch {
       /* erro tratado pelo estado da mutation */
@@ -114,6 +118,9 @@ export const SubscriptionsPage: React.FC = () => {
         id: offer.id,
         outcome,
         offer: outcome === "saved" ? offer.recommended : undefined,
+        ...(outcome === "saved" && offer.recommended === "discount"
+          ? { discountPercent: discountPct, discountMonths: discountMo }
+          : {}),
       });
       closeCancel();
     } catch {
@@ -291,7 +298,17 @@ export const SubscriptionsPage: React.FC = () => {
                           </div>
                         </td>
                         <td className="p-4 text-text-muted">{s.client?.name ?? "—"}</td>
-                        <td className="p-4 font-semibold">{formatBRL(s.amount)}</td>
+                        <td className="p-4 font-semibold">
+                          {formatBRL(s.amount)}
+                          {s.discountPercent && s.discountUntil && new Date(s.discountUntil) >= new Date() && (
+                            <span
+                              className="ml-2 text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 text-brand-success font-medium"
+                              title={`Desconto de retenção ativo até ${formatDate(s.discountUntil)}`}
+                            >
+                              -{s.discountPercent}% até {formatDate(s.discountUntil)}
+                            </span>
+                          )}
+                        </td>
                         <td className="p-4 text-text-muted">dia {s.dayOfMonth}</td>
                         <td className="p-4 text-text-muted font-mono text-xs">{formatDate(s.nextRunDate)}</td>
                         <td className="p-4">
@@ -525,8 +542,38 @@ export const SubscriptionsPage: React.FC = () => {
               Cliente: <span className="text-text-muted">{offer.subscription.clientName}</span>
               {offer.recommended === "pause"
                 ? " · aplicar deixa a assinatura Pausada (a vaga fica guardada)."
+                : offer.recommended === "discount"
+                ? " · aplicar dá o desconto nas próximas faturas automaticamente e volta ao normal depois."
                 : " · registramos a retenção; a assinatura segue ativa para você aplicar a oferta."}
             </p>
+
+            {offer.recommended === "discount" && (
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Desconto (%)</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    className={inputClass}
+                    value={discountPct}
+                    onChange={(e) => setDiscountPct(Number(e.target.value))}
+                  />
+                </label>
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Por (meses)</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={12}
+                    className={inputClass}
+                    value={discountMo}
+                    onChange={(e) => setDiscountMo(Number(e.target.value))}
+                  />
+                </label>
+              </div>
+            )}
+
             {resolveCancellation.isError && (
               <div className="flex items-start gap-2 bg-brand-danger/10 border border-brand-danger/20 text-rose-300 text-sm rounded-xl px-3.5 py-2.5">
                 <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
@@ -540,7 +587,9 @@ export const SubscriptionsPage: React.FC = () => {
                 className="focus-ring w-full bg-brand-primary hover:bg-brand-hover text-white font-semibold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60"
               >
                 {resolveCancellation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                Aplicar: {OFFER_LABEL[offer.recommended]}
+                {offer.recommended === "discount"
+                  ? `Aplicar ${discountPct}% por ${discountMo} ${discountMo === 1 ? "mês" : "meses"}`
+                  : `Aplicar: ${OFFER_LABEL[offer.recommended]}`}
               </button>
               <button
                 onClick={() => resolveCancel("cancelled")}

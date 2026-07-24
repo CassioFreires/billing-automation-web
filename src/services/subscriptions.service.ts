@@ -11,6 +11,8 @@ export interface Subscription {
   createdAt?: string;
   clientId: string;
   client?: { id?: string; name?: string; phone?: string };
+  discountPercent?: number | null; // desconto de retenção ativo (spec 0038)
+  discountUntil?: string | null;
 }
 
 export interface SubscriptionInput {
