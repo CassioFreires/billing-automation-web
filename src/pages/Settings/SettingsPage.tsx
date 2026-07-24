@@ -22,6 +22,7 @@ import { RetentionSettings } from "./RetentionSettings";
 import { ContractSettings } from "./ContractSettings";
 import { AccessSettings } from "./AccessSettings";
 import { IntegrationSettings } from "./IntegrationSettings";
+import { OfferSettings } from "./OfferSettings";
 
 const PROVIDERS: { value: PaymentProvider; label: string; desc: string }[] = [
   { value: "infinitepay", label: "InfinitePay", desc: "Link de checkout (PIX + cartão). Só precisa do seu handle." },
@@ -646,6 +647,9 @@ export const SettingsPage: React.FC = () => {
           </form>
         )}
       </div>
+
+      {/* Loja no Pagamento (spec 0044, F15) */}
+      <OfferSettings />
 
       {/* Canal de envio das cobranças (spec 0032) */}
       <ChannelSettings />
