@@ -7,6 +7,7 @@ import portalService from "../../services/portal.service";
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from "../../hooks/useClients";
 import type { Client, ClientInput } from "../../services/clientes.service";
 import { ImportWizard } from "./ImportWizard";
+import { formatDate } from "../../lib/format";
 
 const EMPTY_FORM: ClientInput = { name: "", phone: "", document: "", email: "" };
 
@@ -244,16 +245,26 @@ export const ClientsPage: React.FC = () => {
                         )}
                       </td>
                       <td className="p-4">
-                        {c.health ? (
-                          <span
-                            className={`text-xs px-2.5 py-0.5 rounded-full border font-medium ${healthBadge[c.health.band] ?? healthBadge.watch}`}
-                            title={`Score ${c.health.score}/100`}
-                          >
-                            {healthLabel[c.health.band] ?? c.health.band} · {c.health.score}
-                          </span>
-                        ) : (
-                          <span className="text-text-faint text-xs">—</span>
-                        )}
+                        <div className="flex flex-col items-start gap-1">
+                          {c.health ? (
+                            <span
+                              className={`text-xs px-2.5 py-0.5 rounded-full border font-medium ${healthBadge[c.health.band] ?? healthBadge.watch}`}
+                              title={`Score ${c.health.score}/100`}
+                            >
+                              {healthLabel[c.health.band] ?? c.health.band} · {c.health.score}
+                            </span>
+                          ) : (
+                            <span className="text-text-faint text-xs">—</span>
+                          )}
+                          {c.contractAcceptances?.[0] && (
+                            <span
+                              className="inline-flex items-center gap-1 text-[10px] text-brand-success"
+                              title={`Contrato aceito em ${formatDate(c.contractAcceptances[0].acceptedAt)}`}
+                            >
+                              <Check className="h-3 w-3" /> Contrato v{c.contractAcceptances[0].version}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center justify-center gap-2">

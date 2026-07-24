@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { Loader2, ShieldCheck, AlertCircle, ArrowRight, CheckCircle2, Clock } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Loader2, ShieldCheck, AlertCircle, ArrowRight, CheckCircle2, Clock, FileSignature } from "lucide-react";
 import portalService from "../../services/portal.service";
-import type { PortalInvoice } from "../../services/portal.service";
+import type { PortalInvoice, PortalContract } from "../../services/portal.service";
 import { Logo } from "../../components/Logo";
 import { formatBRL, formatDate } from "../../lib/format";
 
@@ -88,6 +88,8 @@ export const PortalPage: React.FC = () => {
         )}
       </div>
 
+      {data.contract && <ContractCard token={token} contract={data.contract} />}
+
       {data.open.length > 0 && (
         <div className={card}>
           <h2 className="font-bold text-lg mb-4 flex items-center gap-2">
@@ -111,6 +113,97 @@ export const PortalPage: React.FC = () => {
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+/** Contrato no Celular (spec 0040): mostra o contrato e permite assinar (nome + concordo). */
+const ContractCard: React.FC<{ token: string; contract: PortalContract }> = ({ token, contract }) => {
+  const qc = useQueryClient();
+  const [name, setName] = useState("");
+  const [agree, setAgree] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const accept = useMutation({
+    mutationFn: () => portalService.acceptContract(token, name.trim()),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["portal", token] }),
+  });
+
+  const card = "bg-bg-card border border-border-subtle/80 rounded-2xl p-6";
+
+  if (contract.accepted) {
+    return (
+      <div className={`${card} border-emerald-500/20`}>
+        <div className="flex items-center gap-2 text-brand-success">
+          <CheckCircle2 className="h-5 w-5 shrink-0" />
+          <div>
+            <p className="font-semibold text-sm">Contrato aceito</p>
+            <p className="text-xs text-text-muted">
+              {contract.title} (v{contract.version})
+              {contract.acceptedAt ? ` · em ${formatDate(contract.acceptedAt)}` : ""}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErr(null);
+    if (name.trim().length < 3) return setErr("Digite seu nome completo.");
+    if (!agree) return setErr("Você precisa marcar que leu e concorda.");
+    accept.mutate();
+  };
+
+  return (
+    <div className={card}>
+      <h2 className="font-bold text-lg mb-1 flex items-center gap-2">
+        <FileSignature className="h-4 w-4 text-brand-primary" /> {contract.title}
+      </h2>
+      <p className="text-xs text-text-faint mb-3">Leia e assine para continuar (v{contract.version}).</p>
+
+      <div className="max-h-64 overflow-y-auto rounded-xl bg-bg-main/50 border border-border-subtle/60 p-4 text-sm text-text-muted whitespace-pre-wrap leading-relaxed">
+        {contract.body}
+      </div>
+
+      <form onSubmit={submit} className="mt-4 space-y-3">
+        <label className="block space-y-1.5">
+          <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Seu nome completo (assinatura)</span>
+          <input
+            className="focus-ring w-full bg-bg-main/60 border border-border-subtle rounded-xl px-3 py-2.5 text-sm"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Nome completo"
+          />
+        </label>
+        <label className="flex items-start gap-2.5 cursor-pointer text-sm">
+          <input type="checkbox" className="mt-0.5 accent-brand-primary h-4 w-4" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
+          <span className="text-text-muted">Li e concordo com o contrato acima.</span>
+        </label>
+
+        {err && (
+          <div className="flex items-start gap-2 bg-brand-danger/10 border border-brand-danger/20 text-rose-300 text-sm rounded-xl px-3.5 py-2.5">
+            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>{err}</span>
+          </div>
+        )}
+        {accept.isError && (
+          <div className="flex items-start gap-2 bg-brand-danger/10 border border-brand-danger/20 text-rose-300 text-sm rounded-xl px-3.5 py-2.5">
+            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>Não foi possível registrar o aceite. Tente de novo.</span>
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={accept.isPending}
+          className="focus-ring w-full bg-brand-primary hover:bg-brand-hover text-white font-semibold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60"
+        >
+          {accept.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+          Assinar contrato
+        </button>
+      </form>
     </div>
   );
 };
