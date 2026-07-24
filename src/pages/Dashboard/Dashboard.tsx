@@ -14,6 +14,7 @@ import {
   Check,
   Loader2,
   LineChart,
+  HelpCircle,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCockpit, useDailyActions, useTriggerCharge, useForecast } from "../../hooks/useCockpit";
@@ -157,24 +158,78 @@ export const DashboardPage: React.FC = () => {
 
       {/* Previsão de caixa (spec 0039, F4) — quanto entra e quando */}
       <div className="bg-bg-card border border-border-subtle/60 rounded-2xl p-6">
-        <div className="flex items-center justify-between gap-3 mb-1 flex-wrap">
-          <h3 className="font-bold text-lg flex items-center gap-2">
-            <LineChart className="h-4 w-4 text-brand-primary" /> Previsão de caixa (30 dias)
-          </h3>
-          {forecast && (
-            <div className="text-sm text-text-muted">
-              provável <span className="font-bold text-brand-success">{formatBRL(forecast.total.provavel)}</span>
-              <span className="text-text-faint"> de {formatBRL(forecast.total.esperado)} esperado</span>
-              <span className="ml-2 text-xs px-2 py-0.5 rounded-full border border-border-subtle bg-bg-main/50">
-                {Math.round(forecast.total.confianca * 100)}% confiança
-              </span>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h3 className="font-bold text-lg flex items-center gap-2">
+              <LineChart className="h-4 w-4 text-brand-primary" /> Previsão de caixa
+            </h3>
+            <p className="text-sm text-text-muted mt-0.5">
+              Quanto deve entrar nos <strong>próximos 30 dias</strong>.
+            </p>
+          </div>
+          <details className="text-xs text-text-muted max-w-full">
+            <summary className="cursor-pointer text-brand-primary hover:underline list-none flex items-center gap-1">
+              <HelpCircle className="h-3.5 w-3.5" /> Como calculamos?
+            </summary>
+            <div className="mt-2 bg-bg-main/50 border border-border-subtle rounded-xl p-3 space-y-1.5 w-72 max-w-[80vw]">
+              <p><strong className="text-text-muted">Previsto</strong>: soma do que vence + assinaturas que vão gerar (já com desconto).</p>
+              <p><strong className="text-brand-success">Provável</strong>: o previsto ajustado pela chance de cada cliente pagar:</p>
+              <ul className="pl-3 space-y-0.5">
+                <li>🟢 saudável ~95% · 🟡 atenção ~75% · 🔴 em risco ~45%</li>
+                <li>quem tem atraso médio alto pesa menos.</li>
+              </ul>
+              <p><strong className="text-brand-warning">Em risco</strong>: o previsto que pode <em>não</em> cair no prazo (previsto − provável).</p>
             </div>
-          )}
+          </details>
         </div>
-        <p className="text-xs text-text-faint mb-4">
-          O <strong>provável</strong> ajusta o esperado pela chance de cada cliente pagar (quem atrasa, atrasa na conta).
-        </p>
-        <ForecastChart loading={forecastLoading && !forecast} baldes={forecast?.baldes ?? []} />
+
+        {forecastLoading && !forecast ? (
+          <div className="h-56 rounded-xl bg-bg-main/60 animate-pulse mt-5" />
+        ) : !forecast || forecast.total.esperado === 0 ? (
+          <p className="text-sm text-text-muted py-10 text-center">
+            Nada previsto para os próximos 30 dias. Cadastre faturas ou assinaturas com vencimento no período.
+          </p>
+        ) : (
+          <>
+            {/* Números-herói: provável (foco) · previsto · em risco */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
+              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+                <p className="text-xs font-semibold text-brand-success uppercase tracking-wider">Provável de entrar</p>
+                <p className="text-3xl font-black text-brand-success mt-1 tabular-nums">{formatBRL(forecast.total.provavel)}</p>
+                <p className="text-xs text-text-faint mt-0.5">{Math.round(forecast.total.confianca * 100)}% de confiança</p>
+              </div>
+              <div className="rounded-2xl border border-border-subtle/60 bg-bg-main/40 p-4">
+                <p className="text-xs font-semibold text-text-muted uppercase tracking-wider">Previsto (bruto)</p>
+                <p className="text-3xl font-black mt-1 tabular-nums">{formatBRL(forecast.total.esperado)}</p>
+                <p className="text-xs text-text-faint mt-0.5">tudo que vence no período</p>
+              </div>
+              <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
+                <p className="text-xs font-semibold text-brand-warning uppercase tracking-wider">Em risco</p>
+                <p className="text-3xl font-black text-brand-warning mt-1 tabular-nums">
+                  {formatBRL(Math.max(0, forecast.total.esperado - forecast.total.provavel))}
+                </p>
+                <p className="text-xs text-text-faint mt-0.5">pode não cair no prazo</p>
+              </div>
+            </div>
+
+            {/* Barra de confiança */}
+            <div className="mt-5">
+              <div className="flex items-center justify-between text-xs text-text-muted mb-1.5">
+                <span>Confiança do recebimento</span>
+                <span className="font-semibold tabular-nums">{Math.round(forecast.total.confianca * 100)}%</span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-bg-main overflow-hidden">
+                <div className="h-full rounded-full bg-brand-success" style={{ width: `${Math.round(forecast.total.confianca * 100)}%` }} />
+              </div>
+            </div>
+
+            {/* Quebra por semana */}
+            <div className="mt-6">
+              <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Por semana</p>
+              <ForecastChart baldes={forecast.baldes} />
+            </div>
+          </>
+        )}
       </div>
 
       {/* Em recuperação (spec 0033, F1) — atalho para os casos ativos */}
@@ -348,46 +403,54 @@ const DailyActionsList: React.FC<{ loading: boolean; items: DailyAction[] }> = (
   );
 };
 
-/** Previsão de caixa (F4): barra por semana — esperado (trilho) × provável (preenchido). */
+/**
+ * Previsão de caixa (F4): uma barra por semana, empilhada — provável (verde) +
+ * em risco (âmbar). O comprimento total = previsto da semana, proporcional ao
+ * maior previsto do período; assim dá pra comparar as semanas de relance.
+ */
 const ForecastChart: React.FC<{
-  loading: boolean;
-  baldes: { label: string; de: string; esperado: number; provavel: number }[];
-}> = ({ loading, baldes }) => {
-  if (loading) {
-    return (
-      <div className="space-y-3">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-8 rounded-lg bg-bg-main/60 animate-pulse" />
-        ))}
-      </div>
-    );
-  }
+  baldes: { label: string; de: string; ate: string; esperado: number; provavel: number }[];
+}> = ({ baldes }) => {
   const max = Math.max(1, ...baldes.map((b) => b.esperado));
-  if (baldes.every((b) => b.esperado === 0)) {
-    return <p className="text-sm text-text-muted py-6 text-center">Nada previsto para os próximos 30 dias.</p>;
-  }
   return (
-    <div className="space-y-3">
-      {baldes.map((b) => (
-        <div key={b.label} className="space-y-1">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-text-muted">
-              {b.label} <span className="text-text-faint">· {formatDate(b.de)}</span>
-            </span>
-            <span className="font-mono">
-              <span className="text-brand-success font-semibold">{formatBRL(b.provavel)}</span>
-              <span className="text-text-faint"> / {formatBRL(b.esperado)}</span>
-            </span>
+    <div className="space-y-3.5">
+      {baldes.map((b) => {
+        const risco = Math.max(0, b.esperado - b.provavel);
+        const provPct = (b.provavel / max) * 100;
+        const riscoPct = (risco / max) * 100;
+        const semana = `${formatDate(b.de)} – ${formatDate(b.ate)}`;
+        return (
+          <div key={b.label} className="space-y-1">
+            <div className="flex items-baseline justify-between text-xs gap-2">
+              <span className="text-text-muted">
+                {b.label} <span className="text-text-faint">· {semana}</span>
+              </span>
+              <span className="tabular-nums text-text-faint">
+                <span className="text-brand-success font-semibold">{formatBRL(b.provavel)}</span>
+                {risco > 0 && <span> + {formatBRL(risco)} em risco</span>}
+              </span>
+            </div>
+            {b.esperado === 0 ? (
+              <div className="h-3.5 w-full rounded-full bg-bg-main" />
+            ) : (
+              <div
+                className="flex h-3.5 w-full items-stretch gap-0.5"
+                title={`${semana}: provável ${formatBRL(b.provavel)} · em risco ${formatBRL(risco)} · previsto ${formatBRL(b.esperado)}`}
+              >
+                {provPct > 0 && (
+                  <div className="rounded-full bg-brand-success min-w-[3px]" style={{ width: `${provPct}%` }} />
+                )}
+                {riscoPct > 0 && (
+                  <div className="rounded-full bg-brand-warning/70 min-w-[3px]" style={{ width: `${riscoPct}%` }} />
+                )}
+              </div>
+            )}
           </div>
-          <div className="relative h-3 w-full rounded-full bg-bg-main overflow-hidden">
-            <div className="absolute inset-y-0 left-0 bg-brand-primary/25" style={{ width: `${(b.esperado / max) * 100}%` }} />
-            <div className="absolute inset-y-0 left-0 bg-brand-success" style={{ width: `${(b.provavel / max) * 100}%` }} />
-          </div>
-        </div>
-      ))}
-      <div className="flex items-center gap-4 pt-1 text-[11px] text-text-faint">
-        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-brand-success" /> provável</span>
-        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-brand-primary/25" /> esperado</span>
+        );
+      })}
+      <div className="flex items-center gap-4 pt-1.5 text-[11px] text-text-faint border-t border-border-subtle/50 mt-1">
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-brand-success" /> provável de entrar</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-brand-warning/70" /> em risco de não cair</span>
       </div>
     </div>
   );
