@@ -17,6 +17,7 @@ export interface Client {
   debtValue?: number;
   createdAt?: string;
   health?: ClientHealth | null; // Radar de Risco (spec 0035)
+  contractAcceptances?: { version: number; acceptedAt: string }[]; // Contrato (spec 0040) — [0] = mais recente
 }
 
 export interface ClientInput {
