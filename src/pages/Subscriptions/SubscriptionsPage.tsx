@@ -10,6 +10,7 @@ import {
   Play,
   Pause,
   CheckCircle2,
+  HeartHandshake,
 } from "lucide-react";
 import { isAxiosError } from "axios";
 import { Modal } from "../../components/ui/Modal";
@@ -23,6 +24,25 @@ import {
   useRunSubscriptions,
 } from "../../hooks/useSubscriptions";
 import type { Subscription, RunResult } from "../../services/subscriptions.service";
+import { useOpenCancellation, useResolveCancellation } from "../../hooks/useRetention";
+import type { CancellationReason, OpenCancellationResult, SaveOffer } from "../../services/retention.service";
+
+/** Motivos do cancelamento (F11) — rótulos amigáveis. */
+const REASON_OPTIONS: { value: CancellationReason; label: string }[] = [
+  { value: "preco", label: "Está caro / aperto no orçamento" },
+  { value: "nao_uso", label: "Não estou usando" },
+  { value: "mudanca", label: "Mudança (endereço, momento, etc.)" },
+  { value: "insatisfacao", label: "Insatisfação com o serviço" },
+  { value: "outro", label: "Outro motivo" },
+];
+
+/** Rótulo da oferta de retenção (F11). */
+const OFFER_LABEL: Record<SaveOffer, string> = {
+  pause: "Pausar assinatura",
+  discount: "Oferecer desconto temporário",
+  downgrade: "Oferecer plano mais enxuto",
+  winback_later: "Deixar voltar depois",
+};
 
 interface FormState {
   clientId: string;
@@ -59,6 +79,47 @@ export const SubscriptionsPage: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Subscription | null>(null);
   const [runResult, setRunResult] = useState<RunResult | null>(null);
+
+  // Fluxo de retenção (F11): assinatura em cancelamento, motivo e oferta recomendada.
+  const [toCancel, setToCancel] = useState<Subscription | null>(null);
+  const [reason, setReason] = useState<CancellationReason>("preco");
+  const [offer, setOffer] = useState<OpenCancellationResult | null>(null);
+  const openCancellation = useOpenCancellation();
+  const resolveCancellation = useResolveCancellation();
+
+  const startCancel = (s: Subscription) => {
+    setToCancel(s);
+    setReason("preco");
+    setOffer(null);
+  };
+  const closeCancel = () => {
+    setToCancel(null);
+    setOffer(null);
+    openCancellation.reset();
+    resolveCancellation.reset();
+  };
+  const seeOffer = async () => {
+    if (!toCancel) return;
+    try {
+      const result = await openCancellation.mutateAsync({ subscriptionId: toCancel.id, reason });
+      setOffer(result);
+    } catch {
+      /* erro tratado pelo estado da mutation */
+    }
+  };
+  const resolveCancel = async (outcome: "saved" | "cancelled") => {
+    if (!offer) return;
+    try {
+      await resolveCancellation.mutateAsync({
+        id: offer.id,
+        outcome,
+        offer: outcome === "saved" ? offer.recommended : undefined,
+      });
+      closeCancel();
+    } catch {
+      /* mantém o modal */
+    }
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -250,6 +311,16 @@ export const SubscriptionsPage: React.FC = () => {
                                 {s.status === "ACTIVE" ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                               </button>
                             )}
+                            {s.status !== "CANCELED" && (
+                              <button
+                                onClick={() => startCancel(s)}
+                                className="focus-ring p-2 rounded-lg text-text-muted hover:text-brand-primary hover:bg-sky-500/10 transition-all"
+                                aria-label="Cancelar com retenção"
+                                title="Cancelar (o sistema tenta reter antes)"
+                              >
+                                <HeartHandshake className="h-4 w-4" />
+                              </button>
+                            )}
                             <button
                               onClick={() => openEdit(s)}
                               className="focus-ring p-2 rounded-lg text-text-muted hover:text-white hover:bg-bg-elevated transition-all"
@@ -384,6 +455,103 @@ export const SubscriptionsPage: React.FC = () => {
             Excluir
           </button>
         </div>
+      </Modal>
+
+      {/* Modal de retenção (F11): motivo → oferta → salvar/cancelar */}
+      <Modal open={!!toCancel} onClose={closeCancel} title="Cancelar assinatura">
+        {!offer ? (
+          <div className="space-y-4">
+            <p className="text-sm text-text-muted">
+              Antes de cancelar <span className="text-white font-medium">{toCancel?.description}</span>, conte o
+              motivo — o sistema sugere uma alternativa para não perder o cliente.
+            </p>
+            <div className="space-y-2">
+              {REASON_OPTIONS.map((r) => (
+                <label
+                  key={r.value}
+                  className={`flex items-center gap-3 rounded-xl border px-3.5 py-2.5 text-sm cursor-pointer transition-all ${
+                    reason === r.value
+                      ? "border-brand-primary/50 bg-brand-primary/10"
+                      : "border-border-subtle hover:bg-bg-elevated"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="cancel-reason"
+                    className="accent-brand-primary"
+                    checked={reason === r.value}
+                    onChange={() => setReason(r.value)}
+                  />
+                  {r.label}
+                </label>
+              ))}
+            </div>
+            {openCancellation.isError && (
+              <div className="flex items-start gap-2 bg-brand-danger/10 border border-brand-danger/20 text-rose-300 text-sm rounded-xl px-3.5 py-2.5">
+                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>Não foi possível abrir o fluxo. Tente de novo.</span>
+              </div>
+            )}
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={closeCancel}
+                className="focus-ring flex-1 border border-border-subtle hover:bg-bg-elevated rounded-xl py-2.5 text-sm font-medium transition-all"
+              >
+                Voltar
+              </button>
+              <button
+                onClick={seeOffer}
+                disabled={openCancellation.isPending}
+                className="focus-ring flex-1 bg-brand-primary hover:bg-brand-hover text-white font-semibold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60"
+              >
+                {openCancellation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                Ver opção de retenção
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 bg-brand-primary/10 border border-brand-primary/20 rounded-xl px-4 py-3.5">
+              <HeartHandshake className="h-5 w-5 text-brand-primary mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-white">
+                  Sugestão: {OFFER_LABEL[offer.recommended]}
+                </p>
+                <p className="text-sm text-text-muted mt-1">{offer.message}</p>
+              </div>
+            </div>
+            <p className="text-xs text-text-faint">
+              Cliente: <span className="text-text-muted">{offer.subscription.clientName}</span>
+              {offer.recommended === "pause"
+                ? " · aplicar deixa a assinatura Pausada (a vaga fica guardada)."
+                : " · registramos a retenção; a assinatura segue ativa para você aplicar a oferta."}
+            </p>
+            {resolveCancellation.isError && (
+              <div className="flex items-start gap-2 bg-brand-danger/10 border border-brand-danger/20 text-rose-300 text-sm rounded-xl px-3.5 py-2.5">
+                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>Não foi possível concluir. Tente de novo.</span>
+              </div>
+            )}
+            <div className="flex flex-col gap-2.5 pt-1">
+              <button
+                onClick={() => resolveCancel("saved")}
+                disabled={resolveCancellation.isPending}
+                className="focus-ring w-full bg-brand-primary hover:bg-brand-hover text-white font-semibold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60"
+              >
+                {resolveCancellation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                Aplicar: {OFFER_LABEL[offer.recommended]}
+              </button>
+              <button
+                onClick={() => resolveCancel("cancelled")}
+                disabled={resolveCancellation.isPending}
+                className="focus-ring w-full border border-border-subtle hover:bg-rose-500/10 hover:text-rose-300 text-text-muted rounded-xl py-2.5 text-sm font-medium transition-all disabled:opacity-60"
+              >
+                Cancelar assinatura mesmo assim
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
