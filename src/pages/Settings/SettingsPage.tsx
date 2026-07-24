@@ -18,6 +18,7 @@ import type {
 import { PrivacySettings } from "./PrivacySettings";
 import { ReguaSettings } from "./ReguaSettings";
 import { ChannelSettings } from "./ChannelSettings";
+import { RetentionSettings } from "./RetentionSettings";
 
 const PROVIDERS: { value: PaymentProvider; label: string; desc: string }[] = [
   { value: "infinitepay", label: "InfinitePay", desc: "Link de checkout (PIX + cartão). Só precisa do seu handle." },
@@ -648,6 +649,9 @@ export const SettingsPage: React.FC = () => {
 
       {/* Régua de cobrança multi-passo (spec 0026) */}
       <ReguaSettings />
+
+      {/* Retenção no cancelamento (spec 0038, F11.1) */}
+      <RetentionSettings />
 
       {/* Privacidade e dados (LGPD, spec 0022) */}
       <PrivacySettings />
