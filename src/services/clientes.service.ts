@@ -1,5 +1,12 @@
 import api from "./api";
 
+export interface ClientHealth {
+  score: number; // 0..100
+  band: string; // healthy | watch | at_risk
+  signals?: Record<string, unknown>;
+  computedAt?: string;
+}
+
 export interface Client {
   id: string;
   name: string;
@@ -9,6 +16,7 @@ export interface Client {
   status: string; // EM_DIA | EM_ATRASO
   debtValue?: number;
   createdAt?: string;
+  health?: ClientHealth | null; // Radar de Risco (spec 0035)
 }
 
 export interface ClientInput {
@@ -33,8 +41,8 @@ export interface ImportResult {
 }
 
 class ClientService {
-  async findAll(): Promise<Client[]> {
-    const response = await api.get("/clients");
+  async findAll(band?: string): Promise<Client[]> {
+    const response = await api.get("/clients", { params: band ? { band } : undefined });
     return response.data;
   }
 
