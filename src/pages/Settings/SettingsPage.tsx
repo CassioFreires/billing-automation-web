@@ -20,6 +20,7 @@ import { ReguaSettings } from "./ReguaSettings";
 import { ChannelSettings } from "./ChannelSettings";
 import { RetentionSettings } from "./RetentionSettings";
 import { ContractSettings } from "./ContractSettings";
+import { AccessSettings } from "./AccessSettings";
 
 const PROVIDERS: { value: PaymentProvider; label: string; desc: string }[] = [
   { value: "infinitepay", label: "InfinitePay", desc: "Link de checkout (PIX + cartão). Só precisa do seu handle." },
@@ -656,6 +657,9 @@ export const SettingsPage: React.FC = () => {
 
       {/* Contrato no celular (spec 0040, F14) */}
       <ContractSettings />
+
+      {/* Controle de acesso (spec 0042, F12) */}
+      <AccessSettings />
 
       {/* Privacidade e dados (LGPD, spec 0022) */}
       <PrivacySettings />
