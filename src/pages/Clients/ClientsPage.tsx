@@ -8,6 +8,14 @@ import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from ".
 import type { Client, ClientInput } from "../../services/clientes.service";
 import { ImportWizard } from "./ImportWizard";
 import { formatDate } from "../../lib/format";
+import { useClientsAccess, useSetAccessOverride } from "../../hooks/useAccess";
+
+// Estado de acesso (spec 0042) — selo por estado efetivo.
+const ACCESS_BADGE: Record<string, { label: string; cls: string }> = {
+  allowed: { label: "Liberado", cls: "text-brand-success bg-emerald-500/10 border-emerald-500/20" },
+  grace: { label: "Carência", cls: "text-brand-warning bg-amber-500/10 border-amber-500/20" },
+  blocked: { label: "Bloqueado", cls: "text-rose-400 bg-rose-500/10 border-rose-500/20" },
+};
 
 const EMPTY_FORM: ClientInput = { name: "", phone: "", document: "", email: "" };
 
@@ -33,6 +41,9 @@ function apiError(err: unknown, fallback: string): string {
 
 export const ClientsPage: React.FC = () => {
   const { data: clients = [], isLoading, error } = useClients();
+  const { data: accessList = [] } = useClientsAccess();
+  const setOverride = useSetAccessOverride();
+  const accessById = useMemo(() => new Map(accessList.map((a) => [a.clientId, a])), [accessList]);
   const createClient = useCreateClient();
   const updateClient = useUpdateClient();
   const deleteClient = useDeleteClient();
@@ -206,6 +217,7 @@ export const ClientsPage: React.FC = () => {
                   <th className="p-4">Documento</th>
                   <th className="p-4">Status</th>
                   <th className="p-4">Saúde</th>
+                  <th className="p-4">Acesso</th>
                   <th className="p-4 text-center">Ações</th>
                 </tr>
               </thead>
@@ -213,14 +225,14 @@ export const ClientsPage: React.FC = () => {
                 {isLoading ? (
                   Array.from({ length: 4 }).map((_, i) => (
                     <tr key={i}>
-                      <td colSpan={6} className="p-3">
+                      <td colSpan={7} className="p-3">
                         <div className="h-8 rounded-lg bg-bg-main/60 animate-pulse" />
                       </td>
                     </tr>
                   ))
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center p-10 text-text-muted">
+                    <td colSpan={7} className="text-center p-10 text-text-muted">
                       {search ? "Nenhum cliente encontrado." : "Nenhum cliente cadastrado ainda."}
                     </td>
                   </tr>
@@ -265,6 +277,30 @@ export const ClientsPage: React.FC = () => {
                             </span>
                           )}
                         </div>
+                      </td>
+                      <td className="p-4">
+                        {(() => {
+                          const acc = accessById.get(c.id);
+                          if (!acc) return <span className="text-text-faint text-xs">—</span>;
+                          const badge = ACCESS_BADGE[acc.state] ?? ACCESS_BADGE.allowed;
+                          return (
+                            <div className="flex flex-col items-start gap-1">
+                              <span className={`text-xs px-2.5 py-0.5 rounded-full border font-medium ${badge.cls}`} title={acc.reason}>
+                                {badge.label}
+                              </span>
+                              <select
+                                value={acc.override}
+                                onChange={(e) => setOverride.mutate({ clientId: c.id, override: e.target.value as "allow" | "block" | "none" })}
+                                className="focus-ring text-[10px] bg-bg-main/60 border border-border-subtle rounded-md px-1.5 py-0.5 text-text-muted"
+                                title="Override manual"
+                              >
+                                <option value="none">Automático</option>
+                                <option value="allow">Forçar liberado</option>
+                                <option value="block">Forçar bloqueado</option>
+                              </select>
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="p-4">
                         <div className="flex items-center justify-center gap-2">
