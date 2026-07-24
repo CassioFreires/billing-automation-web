@@ -21,6 +21,7 @@ import { ChannelSettings } from "./ChannelSettings";
 import { RetentionSettings } from "./RetentionSettings";
 import { ContractSettings } from "./ContractSettings";
 import { AccessSettings } from "./AccessSettings";
+import { IntegrationSettings } from "./IntegrationSettings";
 
 const PROVIDERS: { value: PaymentProvider; label: string; desc: string }[] = [
   { value: "infinitepay", label: "InfinitePay", desc: "Link de checkout (PIX + cartão). Só precisa do seu handle." },
@@ -660,6 +661,9 @@ export const SettingsPage: React.FC = () => {
 
       {/* Controle de acesso (spec 0042, F12) */}
       <AccessSettings />
+
+      {/* Conexão IoT/Catracas (spec 0043, F13) */}
+      <IntegrationSettings />
 
       {/* Privacidade e dados (LGPD, spec 0022) */}
       <PrivacySettings />

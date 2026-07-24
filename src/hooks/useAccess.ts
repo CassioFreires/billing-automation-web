@@ -30,3 +30,56 @@ export function useSetAccessOverride() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["access", "clients"] }),
   });
 }
+
+/** Conexão IoT/Catracas (spec 0043). Integração (API key + webhook) e log de eventos. */
+export function useAccessIntegration() {
+  return useQuery({ queryKey: ["access", "integration"], queryFn: () => accessService.getIntegration() });
+}
+
+export function useSetIntegrationEnabled() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (enabled: boolean) => accessService.setIntegrationEnabled(enabled),
+    onSuccess: (data) => qc.setQueryData(["access", "integration"], data),
+  });
+}
+
+export function useRotateApiKey() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => accessService.rotateApiKey(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["access", "integration"] }),
+  });
+}
+
+export function useRevokeApiKey() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => accessService.revokeApiKey(),
+    onSuccess: (data) => qc.setQueryData(["access", "integration"], data),
+  });
+}
+
+export function useSetWebhook() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (webhookUrl: string) => accessService.setWebhook(webhookUrl),
+    onSuccess: (data) => qc.setQueryData(["access", "integration"], data),
+  });
+}
+
+export function useClearWebhook() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => accessService.clearWebhook(),
+    onSuccess: (data) => qc.setQueryData(["access", "integration"], data),
+  });
+}
+
+export function useTestWebhook() {
+  return useMutation({ mutationFn: () => accessService.testWebhook() });
+}
+
+export function useAccessEvents(limit = 50) {
+  return useQuery({ queryKey: ["access", "events", limit], queryFn: () => accessService.listEvents(limit) });
+}
