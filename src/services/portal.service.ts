@@ -16,6 +16,8 @@ export interface PortalContract {
   version: number;
   accepted: boolean;
   acceptedAt: string | null;
+  mode: "text" | "file";
+  fileName: string | null;
 }
 
 export interface PortalView {

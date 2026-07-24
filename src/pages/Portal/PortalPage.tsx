@@ -163,9 +163,20 @@ const ContractCard: React.FC<{ token: string; contract: PortalContract }> = ({ t
       </h2>
       <p className="text-xs text-text-faint mb-3">Leia e assine para continuar (v{contract.version}).</p>
 
-      <div className="max-h-64 overflow-y-auto rounded-xl bg-bg-main/50 border border-border-subtle/60 p-4 text-sm text-text-muted whitespace-pre-wrap leading-relaxed">
-        {contract.body}
-      </div>
+      {contract.mode === "file" ? (
+        <a
+          href={`/api/public/portal/${token}/contract/file`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="focus-ring flex items-center justify-center gap-2 rounded-xl bg-bg-main/50 border border-border-subtle/60 px-4 py-4 text-sm font-medium text-brand-primary hover:bg-bg-elevated transition-all"
+        >
+          <FileSignature className="h-4 w-4" /> Ver contrato (PDF){contract.fileName ? ` · ${contract.fileName}` : ""}
+        </a>
+      ) : (
+        <div className="max-h-64 overflow-y-auto rounded-xl bg-bg-main/50 border border-border-subtle/60 p-4 text-sm text-text-muted whitespace-pre-wrap leading-relaxed">
+          {contract.body}
+        </div>
+      )}
 
       <form onSubmit={submit} className="mt-4 space-y-3">
         <label className="block space-y-1.5">
