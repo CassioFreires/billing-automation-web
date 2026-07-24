@@ -13,9 +13,10 @@ import {
   Send,
   Check,
   Loader2,
+  LineChart,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useCockpit, useDailyActions, useTriggerCharge } from "../../hooks/useCockpit";
+import { useCockpit, useDailyActions, useTriggerCharge, useForecast } from "../../hooks/useCockpit";
 import { useRecoveryCases } from "../../hooks/useRecovery";
 import type { ActionItem as DailyAction } from "../../services/cockpit.service";
 import { formatBRL, formatDate } from "../../lib/format";
@@ -43,6 +44,7 @@ export const DashboardPage: React.FC = () => {
   const { data, isLoading, error } = useCockpit(days);
   const { data: recoveryCases } = useRecoveryCases();
   const { data: actions, isLoading: actionsLoading } = useDailyActions();
+  const { data: forecast, isLoading: forecastLoading } = useForecast(30);
 
   const recoveryActive = (recoveryCases ?? []).filter(
     (c) => c.status === "open" || c.status === "recovering"
@@ -151,6 +153,28 @@ export const DashboardPage: React.FC = () => {
         <div className="p-3 rounded-xl bg-brand-success/10 text-brand-success shrink-0">
           <TrendingUp className="h-7 w-7" />
         </div>
+      </div>
+
+      {/* Previsão de caixa (spec 0039, F4) — quanto entra e quando */}
+      <div className="bg-bg-card border border-border-subtle/60 rounded-2xl p-6">
+        <div className="flex items-center justify-between gap-3 mb-1 flex-wrap">
+          <h3 className="font-bold text-lg flex items-center gap-2">
+            <LineChart className="h-4 w-4 text-brand-primary" /> Previsão de caixa (30 dias)
+          </h3>
+          {forecast && (
+            <div className="text-sm text-text-muted">
+              provável <span className="font-bold text-brand-success">{formatBRL(forecast.total.provavel)}</span>
+              <span className="text-text-faint"> de {formatBRL(forecast.total.esperado)} esperado</span>
+              <span className="ml-2 text-xs px-2 py-0.5 rounded-full border border-border-subtle bg-bg-main/50">
+                {Math.round(forecast.total.confianca * 100)}% confiança
+              </span>
+            </div>
+          )}
+        </div>
+        <p className="text-xs text-text-faint mb-4">
+          O <strong>provável</strong> ajusta o esperado pela chance de cada cliente pagar (quem atrasa, atrasa na conta).
+        </p>
+        <ForecastChart loading={forecastLoading && !forecast} baldes={forecast?.baldes ?? []} />
       </div>
 
       {/* Em recuperação (spec 0033, F1) — atalho para os casos ativos */}
@@ -320,6 +344,51 @@ const DailyActionsList: React.FC<{ loading: boolean; items: DailyAction[] }> = (
           </div>
         );
       })}
+    </div>
+  );
+};
+
+/** Previsão de caixa (F4): barra por semana — esperado (trilho) × provável (preenchido). */
+const ForecastChart: React.FC<{
+  loading: boolean;
+  baldes: { label: string; de: string; esperado: number; provavel: number }[];
+}> = ({ loading, baldes }) => {
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-8 rounded-lg bg-bg-main/60 animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+  const max = Math.max(1, ...baldes.map((b) => b.esperado));
+  if (baldes.every((b) => b.esperado === 0)) {
+    return <p className="text-sm text-text-muted py-6 text-center">Nada previsto para os próximos 30 dias.</p>;
+  }
+  return (
+    <div className="space-y-3">
+      {baldes.map((b) => (
+        <div key={b.label} className="space-y-1">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-text-muted">
+              {b.label} <span className="text-text-faint">· {formatDate(b.de)}</span>
+            </span>
+            <span className="font-mono">
+              <span className="text-brand-success font-semibold">{formatBRL(b.provavel)}</span>
+              <span className="text-text-faint"> / {formatBRL(b.esperado)}</span>
+            </span>
+          </div>
+          <div className="relative h-3 w-full rounded-full bg-bg-main overflow-hidden">
+            <div className="absolute inset-y-0 left-0 bg-brand-primary/25" style={{ width: `${(b.esperado / max) * 100}%` }} />
+            <div className="absolute inset-y-0 left-0 bg-brand-success" style={{ width: `${(b.provavel / max) * 100}%` }} />
+          </div>
+        </div>
+      ))}
+      <div className="flex items-center gap-4 pt-1 text-[11px] text-text-faint">
+        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-brand-success" /> provável</span>
+        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-brand-primary/25" /> esperado</span>
+      </div>
     </div>
   );
 };

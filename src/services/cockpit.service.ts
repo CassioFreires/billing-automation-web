@@ -39,6 +39,21 @@ export interface DailyActions {
   itens: ActionItem[];
 }
 
+/** Previsão de caixa (GET /api/cockpit/forecast — backend spec 0039/F4). */
+export interface CashflowBucket {
+  de: string;
+  ate: string;
+  label: string;
+  esperado: number;
+  provavel: number;
+}
+export interface CashflowForecast {
+  geradoEm: string;
+  dias: number;
+  total: { esperado: number; provavel: number; confianca: number };
+  baldes: CashflowBucket[];
+}
+
 export class CockpitService {
   /** Painel do dono: KPIs, aging e fila de ações. `days` = janela de recebidos. */
   async getOverview(days = 30): Promise<CockpitOverview> {
@@ -49,6 +64,12 @@ export class CockpitService {
   /** Lista do Dia: fila de ação priorizada por dinheiro em risco (F3). */
   async getActions(): Promise<DailyActions> {
     const response = await api.get("/cockpit/actions");
+    return response.data;
+  }
+
+  /** Previsão de caixa: projeção de entrada por semana (F4). */
+  async getForecast(days = 30): Promise<CashflowForecast> {
+    const response = await api.get("/cockpit/forecast", { params: { days } });
     return response.data;
   }
 }
