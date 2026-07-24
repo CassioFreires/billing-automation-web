@@ -16,3 +16,12 @@ export function useUpdateContractSettings() {
     onSuccess: (data) => qc.setQueryData(["contract", "settings"], data),
   });
 }
+
+/** Upload do PDF do contrato (spec 0041). */
+export function useUploadContractFile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => contractService.uploadFile(file),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["contract", "settings"] }),
+  });
+}
